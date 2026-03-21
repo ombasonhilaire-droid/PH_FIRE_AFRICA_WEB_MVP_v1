@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% set title = "Connexion" %}
+{% block content %}
+<div class="card narrow">
+  <h2>Se connecter</h2>
+  <form method="post" action="{{ url_for('login_post') }}">
+    <input type="hidden" name="next" value="{{ next }}">
+    <label>Identifiant (email, téléphone ou username)</label>
+    <input name="identifier" placeholder="ex: demo1@phfire.africa ou demo1" required>
+
+    <label>Mot de passe</label>
+    <input type="password" name="password" placeholder="••••••••" required>
+
+    <button class="btn" type="submit">Connexion</button>
+  </form>
+  <p class="muted">Pas de compte ? <a href="{{ url_for('signup') }}">Créer un compte</a>.</p>
+</div>
+{% endblock %}

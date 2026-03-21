@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+    <h2>🔍 Recherche de Bâtisseurs</h2>
+    <form action="{{ url_for('rechercher') }}" method="get" style="flex-direction: row; gap: 10px;">
+        <input name="q" value="{{ mot_cle }}" placeholder="Nom d'un bâtisseur..." style="flex: 1;">
+        <button class="btn" type="submit">Chercher</button>
+    </form>
+</div>
+
+<div class="stack">
+    {% for u in resultats %}
+    <div class="card" style="display: flex; align-items: center; gap: 15px;">
+        <img src="{{ url_for('static', filename='uploads/' ~ u.profile_pic) }}" class="avatar" 
+             onerror="this.src='https://ui-avatars.com/api/?name={{ u.display_name }}&background=ff2d8d&color=fff'">
+        <div style="flex: 1;">
+            <b>{{ u.display_name }}</b><br>
+            <span class="muted small">@{{ u.username }}</span>
+        </div>
+        <a href="{{ url_for('profile', username=u.username) }}" class="btn btn-ghost">Profil</a>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

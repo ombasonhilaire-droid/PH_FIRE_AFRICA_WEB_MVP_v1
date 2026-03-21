@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+    <a href="{{ url_for('academie_home') }}" class="muted small">← Retour à l'Académie</a>
+    <h1 style="margin-top: 15px;">Filière : {{ domaine.nom }}</h1>
+    <p class="muted">{{ domaine.description }}</p>
+</div>
+
+<h3 style="margin: 20px 0 10px 10px;">📚 Cursus Disponibles</h3>
+
+<div class="stack">
+    {% for c in cursus %}
+    <div class="card" style="display: flex; justify-content: space-between; align-items: center; border-left: 4px solid var(--ok);">
+        <div>
+            <span class="badge" style="font-size: 10px; background: #333;">Niveau: {{ c.niveau }}</span>
+            <h3 style="margin: 5px 0;">{{ c.titre }}</h3>
+            <p class="small muted">⏱️ Durée estimée : {{ c.duree }} heures</p>
+        </div>
+        <a href="{{ url_for('academie_cursus', c_id=c.id) }}" class="btn btn-ghost">
+            Voir le programme
+        </a>
+    </div>
+    {% else %}
+    <div class="card">
+        <p class="muted">Aucun cursus n'est disponible pour ce domaine actuellement.</p>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

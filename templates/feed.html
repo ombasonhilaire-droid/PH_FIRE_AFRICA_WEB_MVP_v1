@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="main-content">
+    
+    <!-- 1. RAIL GAUCHE (Identité & Score) -->
+    <aside class="left-rail">
+        <div class="card" style="position: sticky; top: 80px;">
+            <div class="profile-banner"></div>
+            <div class="profile-avatar-box">
+                <img src="{{ url_for('static', filename='uploads/' ~ me.profile_pic) }}" 
+                     class="avatar-pro" 
+                     onerror="this.src='https://ui-avatars.com/api/?name={{ me.display_name }}&background=ff2d8d&color=fff'">
+            </div>
+            <div style="padding: 15px; text-align: center;">
+                <h4 style="font-size: 16px; margin-bottom: 5px;">{{ me.display_name }}</h4>
+                <p class="muted small">Bâtisseur de l'Afrique</p>
+            </div>
+            
+            <div class="stat-box">
+                <span>Score Global</span>
+                <span class="stat-val">{{ me.score_global or 0 }}</span>
+            </div>
+            <div class="stat-box">
+                <span>Discipline</span>
+                <span class="stat-val">{{ me.discipline_score or 100 }}%</span>
+            </div>
+            <div class="stat-box" style="justify-content: center; background: rgba(255, 45, 141, 0.05);">
+                <a href="{{ url_for('profile', username=me.username) }}" style="color: var(--accent); font-weight: bold; font-size: 12px;">Accéder à mon Académie</a>
+            </div>
+        </div>
+    </aside>
+
+    <!-- 2. RAIL CENTRAL (Le Flux de Savoir) -->
+    <section class="feed-rail">
+        
+        <!-- COMPOSER : Zone de publication -->
+        <div class="card" style="padding: 15px;">
+            <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 12px;">
+                <img src="{{ url_for('static', filename='uploads/' ~ me.profile_pic) }}" class="avatar" style="width:48px;height:48px;">
+                <button class="btn-ghost" style="flex:1; text-align:left; border-radius:25px; padding:12px 20px; color:var(--muted);" onclick="toggleComposer()">
+                    Commencer une publication...
+                </button>
+            </div>
+            
+            <!-- Formulaire caché qui s'ouvre au clic -->
+            <div id="post-composer" style="display: none; border-top: 1px solid var(--border); padding-top: 15px;">
+                <form action="{{ url_for('create_post') }}" method="post" enctype="multipart/form-data">
+                    <textarea name="content" rows="4" placeholder="Partagez un savoir ou une avancée..." style="width: 100%; border:none; background:transparent; color:white; resize:none; font-size: 16px;"></textarea>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+                        <label style="cursor:pointer; font-size: 20px;" title="Ajouter une photo">
+                            🖼️ <input type="file" name="image" accept="image/*" style="display:none;">
+                        </label>
+                        <button type="submit" class="btn-pro" style="padding: 8px 25px;">Publier</button>
+                    </div>
+                </form>
+            </div>
+
+            <div style="display: flex; justify-content: space-around; margin-top: 5px;">
+                <button class="btn-action" onclick="toggleComposer()">🖼️ Photo</button>
+                <button class="btn-action" onclick="location.href='{{ url_for('academie_home') }}'">📚 Cours</button>
+                <button class="btn-action" onclick="toggleComposer()">📝 Article</button>
+            </div>
+        </div>
+
+        <!-- LISTE DES POSTS -->
+        {% for p in posts %}
+        <div class="card post-card">
+            <div class="post-header">
+                <img src="{{ url_for('static', filename='uploads/' + (p.profile_pic if p.profile_pic else 'default_avatar.png')) }}"
+                     onerror="this.src='https://ui-avatars.com/api/?name={{ p.display_name }}&background=333&color=fff'">
+                <div style="flex:1;">
+                    <div class="post-author-name">{{ p.display_name }}</div>
+                    <div class="post-meta">@{{ p.username }} • {{ p.created_at[:10] }}</div>
+                </div>
+                <button class="btn-ghost" style="border:none; color:var(--accent);">+ Suivre</button>
+            </div>
+
+            <div class="post-body">
+                {{ p.content }}
+            </div>
+
+            {% if p.image_filename %}
+                <img src="{{ url_for('static', filename='uploads/' ~ p.image_filename) }}" class="post-img">
+            {% endif %}
+
+            <!-- ACTIONS DU POST -->
+            <div class="post-actions">
+                <form method="post" action="{{ url_for('toggle_like', post_id=p.id) }}" style="flex:1;">
+                    <button type="submit" class="btn-action {% if p.liked_by_me %}active-pink{% endif %}" style="width:100%;">
+                        {% if p.liked_by_me %}❤️{% else %}👍{% endif %} J'aime ({{ p.like_count }})
+                    </button>
+                </form>
+                
+                <button class="btn-action" style="flex:1;" onclick="toggleComments('{{ p.id }}')">
+                    💬 Commenter
+                </button>
+                
+                <button class="btn-action" style="flex:1;" onclick="copyLink('{{ p.id }}')">
+                    🔄 Partager
+                </button>
+            </div>
+
+            <!-- ZONE COMMENTAIRES CACHÉE -->
+            <div id="comments-{{ p.id }}" style="display:none; padding: 15px 0 5px;">
+                <form action="{{ url_for('add_comment', post_id=p.id) }}" method="post" style="display:flex; gap:10px;">
+                    <input name="content" placeholder="Ajouter un commentaire..." required style="flex:1; border-radius: 20px; padding: 8px 15px; margin-bottom:0;">
+                    <button type="submit" class="btn-pro" style="font-size: 12px;">Envoi</button>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+    </section>
+
+    <!-- 3. RAIL DROITE (Économie & Suggestions) -->
+    <aside class="right-rail">
+        <div class="card" style="border-top: 4px solid var(--ok);">
+            <h4 style="font-size: 14px; margin-bottom: 15px;">💰 Ma Mine d'Or</h4>
+            <div style="font-size: 24px; font-weight: 800; color: var(--ok);">{{ "%.4f"|format(me.balance or 0) }} $</div>
+            <p class="muted small">Valeur extraite par le savoir.</p>
+            <a href="{{ url_for('wallet') }}" class="btn-pro" style="display:block; text-align:center; margin-top:15px; text-decoration:none; background:none; border:1px solid var(--ok); color:var(--ok);">Consulter mon Wallet</a>
+        </div>
+
+        <div class="card">
+            <h4 style="font-size: 14px; margin-bottom: 12px;">Bâtisseurs à suivre</h4>
+            <p class="muted small">Recherche de nouveaux profils en cours...</p>
+        </div>
+    </aside>
+</div>
+
+<!-- LOGIQUE JAVASCRIPT -->
+<script>
+    function toggleComposer() {
+        const composer = document.getElementById('post-composer');
+        composer.style.display = (composer.style.display === 'none') ? 'block' : 'none';
+    }
+
+    function toggleComments(id) {
+        const box = document.getElementById('comments-' + id);
+        box.style.display = (box.style.display === 'none') ? 'block' : 'none';
+    }
+
+    function copyLink(id) {
+        const url = window.location.origin + '/u/' + id;
+        navigator.clipboard.writeText(url).then(() => {
+            alert("Lien du post copié ! Partagez le savoir.");
+        });
+    }
+</script>
+
+<style>
+    .active-pink { color: var(--accent) !important; font-weight: 800; }
+    .btn-action { transition: 0.2s; }
+    .btn-action:hover { background: rgba(255,255,255,0.05); border-radius: 4px; }
+</style>
+{% endblock %}
+
+
+
+<!-- RAIL GAUCHE (Profil & Stats) -->
+<aside class="left-rail">
+    <div class="card">
+        <div class="profile-banner"></div>
+        <div class="profile-avatar-box">
+            <img src="{{ url_for('static', filename='uploads/' ~ me.profile_pic) }}" class="avatar-pro">
+        </div>
+        <div style="padding: 15px; text-align: center;">
+            <h4 style="font-size: 16px;">{{ me.display_name }}</h4>
+            <p class="muted small">Bâtisseur de l'Afrique</p>
+        </div>
+        <div class="stat-box">
+            <span>Vues du profil</span><span class="stat-val">96</span>
+        </div>
+        <div class="stat-box">
+            <span>Discipline</span><span class="stat-val">{{ me.discipline_score or 100 }}%</span>
+        </div>
+    </div>
+</aside>
+
+<!-- RAIL CENTRAL (Flux) -->
+<section class="feed-rail">
+    <!-- Composer simple -->
+    <div class="card" style="padding: 15px;">
+        <div style="display: flex; gap: 10px;">
+            <img src="{{ url_for('static', filename='uploads/' ~ me.profile_pic) }}" class="avatar" style="width:48px;height:48px;border-radius:50%;">
+            <button style="flex:1; text-align:left; border-radius:25px; border:1px solid var(--border); background:none; color:var(--muted); padding:0 20px; cursor:pointer;">
+                Commencer un post...
+            </button>
+        </div>
+    </div>
+
+    {% for p in posts %}
+    <div class="card">
+        <div class="post-header">
+            <img src="{{ url_for('static', filename='uploads/' ~ p.profile_pic) }}" style="width:48px;height:48px;border-radius:50%;">
+            <div>
+                <div style="font-weight: 800; font-size: 14px;">{{ p.display_name }}</div>
+                <div class="muted small">@{{ p.username }} • {{ p.created_at[:10] }}</div>
+            </div>
+        </div>
+        <div class="post-body">{{ p.content }}</div>
+        {% if p.image_filename %}
+            <img src="{{ url_for('static', filename='uploads/' ~ p.image_filename) }}" class="post-img">
+        {% endif %}
+        <div class="post-actions">
+            <button class="btn-action">👍 J'aime</button>
+            <button class="btn-action">💬 Commenter</button>
+            <button class="btn-action">🔄 Partager</button>
+        </div>
+    </div>
+    {% endfor %}
+</section>
+
+<!-- RAIL DROITE (Suggestions) -->
+<aside class="right-rail">
+    <div class="card" style="padding: 15px;">
+        <h4 style="font-size: 14px; margin-bottom: 12px;">Ajoutez à votre fil</h4>
+        <p class="muted small">Découvrez d'autres bâtisseurs...</p>
+    </div>
+</aside>

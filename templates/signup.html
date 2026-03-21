@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% set title = "Créer un compte" %}
+{% block content %}
+<div class="card narrow">
+  <h2>Créer un compte</h2>
+  <form method="post" action="{{ url_for('signup_post') }}">
+    <label>Nom d'utilisateur</label>
+    <input name="username" placeholder="ex: pere_hilaire" required>
+
+    <label>Nom affiché</label>
+    <input name="display_name" placeholder="ex: Père Hilaire (PH)">
+
+    <label>Email ou téléphone</label>
+    <input name="identifier" placeholder="ex: +243810402480 ou moi@email.com" required>
+
+    <label>Mot de passe (min 6)</label>
+    <input type="password" name="password" placeholder="••••••••" required>
+
+    <button class="btn" type="submit">Créer</button>
+  </form>
+  <p class="muted">Déjà un compte ? <a href="{{ url_for('login') }}">Se connecter</a>.</p>
+</div>
+{% endblock %}

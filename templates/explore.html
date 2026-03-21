@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% set title = "Explorer" %}
+{% block content %}
+<div class="card">
+  <h2>Explorer</h2>
+  <p class="muted">Tous les posts (ordre récent). Utilise ceci pour découvrir des comptes à suivre.</p>
+</div>
+
+{% for p in posts %}
+  <article class="card post">
+    <header class="post-head">
+      <div>
+        <a class="post-author" href="{{ url_for('profile', username=p.username) }}">{{ p.display_name }}</a>
+        <span class="muted">@{{ p.username }}</span>
+      </div>
+      <div class="muted small">{{ p.created_at }}</div>
+    </header>
+
+    {% if p.content %}
+      <div class="post-body">{{ p.content }}</div>
+    {% endif %}
+
+    {% if p.image_filename %}
+      <div class="post-img">
+        <img src="{{ url_for('static', filename='uploads/' ~ p.image_filename) }}" alt="image">
+      </div>
+    {% endif %}
+
+    <footer class="post-foot">
+      <form method="post" action="{{ url_for('toggle_like', post_id=p.id) }}">
+        <button class="btn btn-ghost" type="submit">
+          {% if p.liked_by_me %}❤️{% else %}🤍{% endif %}
+          <span class="muted">{{ p.like_count }}</span>
+        </button>
+      </form>
+      <a class="btn btn-ghost" href="{{ url_for('thread', username=p.username) }}">✉️</a>
+    </footer>
+
+    <div class="comment-box">
+      <form method="post" action="{{ url_for('add_comment', post_id=p.id) }}">
+        <input name="content" placeholder="Commenter..." required>
+        <button class="btn" type="submit">Envoyer</button>
+      </form>
+    </div>
+  </article>
+{% endfor %}
+{% endblock %}

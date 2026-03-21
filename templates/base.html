@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="ut-8">
+  <meta name="viewport" content="widt=device-width, initial-scale=1">
+  <title>{{ APP_NAME }}{% if title %} . {{ title }}{% endif %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body> 
+  {% if me %}
+  <div class="nav-left">
+    <!--LE LOGO PFA (CLIQUABLE POR REVENIR A L'ACCUEIL)-->
+    <a href="{{ url_for('feed') }}" class="logo-pfa">PFA</a>
+
+ <!-- RECHERCHE (Ajoutée) -->
+  </div>
+      <nav class="nav-icons-group">
+      <a href="{{ url_for('rechercher') }}" class="nav-link-icon" title="Rechercher">
+      <span class="icon">🔍</span><span class="nav-text">Recherche</span></a>
+      <a href="{{ url_for('feed') }}" class="nav-link-icon" title="Accueil">
+      <span class="icon">🏠</span><span class="nav-text">Accueil</span></a>
+      <a href="{{ url_for('academie_home') }}" class="nav-link-icon" title="Éducation">
+      <span class="icon">📚</span><span class="nav-text">Éducation</span></a>
+      <a href="{{ url_for('wallet') }}" class="nav-icon" title="Économie">
+      <span class="icon">💰</span><span class="nav-text">Économie</span></a>
+    <!-- MESSAGERIE (Ajoutée) -->
+      <a href="{{ url_for('messages') }}" class="nav-link-icon" title="Messages">
+      <span class="icon">💬</span><span class="nav-text">Messages</span></a>
+      <a href="{{ url_for('notifications') }}" class="nav-link-icon" title="Notifications">
+      <span class="icon">🔔</span>
+      {% if unread_notifications %}<span class="notif-badge"></span>{% endif %}
+      <span class="nav-text">Notifications</span></a>
+      <a href="{{ url_for('tuteur_view') }}" class="nav-link-icon" title="IA Mwalimu">
+      <span class="icon">🧠</span><span class="nav-text">IA</span></a>
+      <a href="{{ url_for('profile', username=me.username) }}" class="nav-link-icon profile-link">
+      <img src="{{ url_for('static', filename='uploads/' ~ me.profile_pic) }}" class="avatar-nav" onerror="this.src='https://ui-avatars.com/api/?name={{ me.display_name }}&background=ff2d8d&color=fff'">
+      <span class="nav-text">Moi ▼</span></a>
+    </nav>
+  </div>
+  </header>
+  {% endif %}
+
+  <!-- CONTENU PRINCIPAL -->
+  <main class="container">
+    {% with messages = get_flashed_messages(with_categories=True) %}
+      {% if messages %}
+        <div class="flash-container">
+          {% for category, msg in messages %}
+            <div class="flash flash-{{ category }}">{{ msg }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+  </main>
+
+</body>
+</html>

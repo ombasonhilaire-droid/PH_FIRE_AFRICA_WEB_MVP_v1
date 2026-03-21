@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card" style="border-left: 5px solid var(--accent); background: linear-gradient(135deg, #1a1a2e, #0b0b10);">
+    <h1 style="color: var(--accent);">🏗️ Académie PH FIRE</h1>
+    <p class="muted">Choisissez votre domaine de spécialisation. La discipline est la seule clé de la réussite.</p>
+</div>
+
+<div class="grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; margin-top: 20px;">
+    {% for d in domaines %}
+    <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
+        <div>
+            <h2 style="margin-bottom: 10px;">{{ d.nom }}</h2>
+            <p class="small muted" style="line-height: 1.5;">{{ d.description }}</p>
+        </div>
+        <div class="hr"></div>
+        <a href="{{ url_for('academie_domaine', d_id=d.id) }}" class="btn" style="width: 100%;">
+            Entrer dans le Domaine
+        </a>
+    </div>
+    {% else %}
+    <div class="card" style="grid-column: 1 / -1; text-align: center; padding: 50px;">
+        <p class="muted">Aucun domaine n'est encore ouvert. L'administration prépare les fondations.</p>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

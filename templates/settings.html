@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% set title = "Paramètres" %}
+{% block content %}
+<div class="card narrow">
+  <h2>⚙️ Paramètres du Profil</h2>
+  <p class="muted">Personnalise ton identité de Bâtisseur.</p>
+
+  <!-- IMPORTANT: enctype="multipart/form-data" permet d'envoyer des fichiers -->
+  <form method="post" enctype="multipart/form-data">
+  <!-- Zone de Couverture -->
+    <div style="position: relative; width: 100%; height: 150px; background: #222; border-radius: 15px; overflow: hidden; margin-bottom: 60px; border: 1px solid var(--border);">
+        <img src="{{ url_for('static', filename='uploads/' ~ user.cover_pic) }}" 
+             style="width: 100%; height: 100%; object-fit: cover;"
+             onerror="this.src='https://images.unsplash.com/photo-1501785888041-af3ef285b470?q=80&w=1000&auto=format&fit=crop'">
+        
+        <label style="position: absolute; bottom: 10px; right: 10px; background: rgba(0,0,0,0.6); padding: 5px 10px; border-radius: 8px; cursor: pointer; font-size: 12px;">
+            🖼️ Changer la couverture
+            <input type="file" name="cover_pic" accept="image/*" style="display: none;" onchange="this.form.submit()">
+        </label>
+
+        <!-- On repositionne la photo de profil par-dessus la couverture -->
+        <div style="position: absolute; bottom: -50px; left: 20px;">
+            <img src="{{ url_for('static', filename='uploads/' ~ user.profile_pic) }}" class="avatar-large" 
+                 onerror="this.src='https://ui-avatars.com/api/?name={{ user.display_name }}&background=ff2d8d&color=fff'">
+        </div>
+    </div>
+    
+    <!-- Zone de la photo circulaire -->
+    <div style="display: flex; flex-direction: column; align-items: center; margin-bottom: 20px; gap: 10px;">
+        <img src="{{ url_for('static', filename='uploads/' ~ user.profile_pic) }}" 
+             class="avatar-large" 
+             alt="Photo de profil"
+             onerror="this.src='https://ui-avatars.com/api/?name={{ user.display_name }}&background=ff2d8d&color=fff'">
+        
+        <label style="cursor: pointer; color: var(--accent); font-weight: bold;">
+            📷 Cliquez ici pour choisir une photo
+            <input type="file" name="profile_pic" accept="image/*" style="display: none;" onchange="this.form.submit()">
+        </label>
+    </div>
+
+    <label>Nom affiché</label>
+    <input name="display_name" value="{{ user.display_name }}" placeholder="Ton nom">
+
+    <label>Ma Mission (Bio)</label>
+    <textarea name="bio" rows="4" placeholder="Décris ta mission pour l'Afrique...">{{ user.bio }}</textarea>
+
+    <button class="btn" type="submit">Enregistrer les modifications</button>
+  </form>
+</div>
+{% endblock %}

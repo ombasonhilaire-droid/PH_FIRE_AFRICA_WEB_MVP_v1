@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% set title = "Messagerie" %}
+{% block content %}
+<div class="card">
+  <h2>Messagerie</h2>
+  <p class="muted">Discussions privées (MVP). Clique sur un nom pour ouvrir le fil.</p>
+</div>
+
+{% if threads|length == 0 %}
+  <div class="card">
+    <p class="muted">Aucune discussion. Va sur un profil ou un post et clique ✉️.</p>
+  </div>
+{% endif %}
+
+{% for t in threads %}
+  <a class="card thread" href="{{ url_for('thread', username=t.username) }}">
+    <div>
+      <div class="thread-name">{{ t.display_name }}</div>
+      <div class="muted small">@{{ t.username }} • {{ t.last_content or "" }}</div>
+    </div>
+    {% if t.unread_count and t.unread_count|int > 0 %}
+      <span class="badge">{{ t.unread_count }}</span>
+    {% endif %}
+  </a>
+{% endfor %}
+{% endblock %}

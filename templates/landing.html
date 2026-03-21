@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% set title = "Bienvenue" %}
+{% block content %}
+<div class="card hero">
+  <h1>PH FIRE AFRICA</h1>
+  <p class="muted">
+    Plateforme sociale + éducative + économique pensée pour l’Afrique.
+    Cette version est un <b>MVP web</b> prêt à tester (fil d’actualité, likes, commentaires, abonnements, messagerie, notifications).
+  </p>
+  <div class="row">
+    <a class="btn" href="{{ url_for('signup') }}">Commencer</a>
+    <a class="btn btn-ghost" href="{{ url_for('login') }}">J’ai déjà un compte</a>
+  </div>
+  <div class="tip">
+    Astuce: comptes démo disponibles après installation — <b>demo1</b> / <b>demo2</b> (mot de passe <b>demo123</b>).
+  </div>
+</div>
+{% endblock %}

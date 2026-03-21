@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card" style="border-left: 5px solid #2bd576;">
+    <h2 style="color: #2bd576;">💰 Mon Portefeuille de Bâtisseur</h2>
+    <div style="font-size: 3em; font-weight: 800; margin: 20px 0;">
+        {{ "%.4f"|format(wallet.total_earnings) }} <span style="font-size: 0.5em; color: var(--muted);">$</span>
+    </div>
+    <p class="muted">Extraction de valeur en cours via le savoir.</p>
+    <div class="hr"></div>
+    <button class="btn" style="background: #2bd576; color: black; width: 100%;">
+        Retirer via M-Pesa / Airtel Money
+    </button>
+</div>
+{% endblock %}
+
+
+
+<!--{% extends "base.html" %}

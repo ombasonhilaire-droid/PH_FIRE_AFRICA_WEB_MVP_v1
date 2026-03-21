@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% block content %}
+
+<!-- 1. EN-TÊTE DE LA DISCUSSION (STYLE PRO) -->
+<div class="card" style="border-bottom: 3px solid var(--accent); display: flex; align-items: center; gap: 15px; padding: 12px;">
+    <a href="{{ url_for('messages') }}" style="text-decoration: none; font-size: 20px;" title="Retour">⬅️</a>
+    <img src="{{ url_for('static', filename='uploads/' + (other.profile_pic if other.profile_pic else 'default_avatar.png')) }}" 
+         class="avatar-chat" style="width: 40px; height: 40px;">
+    <div style="flex: 1;">
+        <h3 style="margin: 0; font-size: 16px;">{{ other.display_name }}</h3>
+        <span class="muted small">● En ligne sur PH FIRE</span>
+    </div>
+</div>
+
+<!-- 2. ZONE DE DISCUSSION (LOGIQUE WHATSAPP) -->
+<div id="chat-window" class="card" style="height: calc(100vh - 280px); min-height: 400px; overflow-y: auto; padding: 15px; background: #050505; display: flex; flex-direction: column;">
+    {% for m in messages %}
+        <div class="chat-row {% if m.sender_id == me.id %}me{% else %}other{% endif %}">
+            
+            <!-- Photo de l'autre bâtisseur -->
+            {% if m.sender_id != me.id %}
+            <img src="{{ url_for('static', filename='uploads/' + (other.profile_pic if other.profile_pic else 'default_avatar.png')) }}" 
+                 class="avatar-chat" onerror="this.src='https://ui-avatars.com/api/?name={{ other.display_name }}&background=333&color=fff'">
+            {% endif %}
+            
+            <div class="bubble">
+                <div class="msg-content">{{ m.content }}</div>
+                <div style="font-size: 9px; opacity: 0.5; margin-top: 4px; text-align: right;">
+                    {{ m.created_at[11:16] }}
+                </div>
+            </div>
+
+            <!-- Ma photo de profil -->
+            {% if m.sender_id == me.id %}
+            <img src="{{ url_for('static', filename='uploads/' + (me.profile_pic if me.profile_pic else 'default_avatar.png')) }}" 
+                 class="avatar-chat" onerror="this.src='https://ui-avatars.com/api/?name=Moi&background=ff2d8d&color=fff'">
+            {% endif %}
+            
+        </div>
+    {% endfor %}
+</div>
+
+<!-- 3. ZONE DE SAISIE (FIXÉE EN BAS) -->
+<div class="card" style="margin-top: 10px; padding: 10px;">
+    <div style="display: flex; gap: 10px; align-items: center;">
+        <input type="text" id="msg-input" placeholder="Écrivez votre message..." 
+               style="flex: 1; background: rgba(0,0,0,0.4); border: 1px solid var(--border); color: white; padding: 12px 18px; border-radius: 25px; margin-bottom: 0; outline: none;"
+               onkeypress="if(event.key === 'Enter') sendInstantMessage()">
+        
+        <button class="btn" onclick="sendInstantMessage()" style="border-radius: 50%; width: 45px; height: 45px; padding: 0; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+            🚀
+        </button>
+    </div>
+</div>
+
+<!-- 4. LOGIQUE TEMPS RÉEL (SOCKET.IO) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+<script>
+    const socket = io();
+    const otherId = "{{ other.id }}";
+    const chatWindow = document.getElementById('chat-window');
+
+    // Auto-scroll au chargement
+    chatWindow.scrollTop = chatWindow.scrollHeight;
+
+    socket.emit('join', {other_id: otherId});
+
+    // Réception en temps réel
+    socket.on('new_msg', function(data) {
+        const isMe = data.sender_id == "{{ me.id }}";
+        const sideClass = isMe ? "me" : "other";
+        
+        // On récupère les noms de fichiers images définis par Jinja
+        const myPic = "{{ me.profile_pic if me.profile_pic else 'default_avatar.png' }}";
+        const otherPic = "{{ other.profile_pic if other.profile_pic else 'default_avatar.png' }}";
+        const picToUse = isMe ? myPic : otherPic;
+
+        const msgHtml = `
+            <div class="chat-row ${sideClass}">
+                ${!isMe ? `<img src="/static/uploads/${picToUse}" class="avatar-chat">` : ''}
+                <div class="bubble">
+                    <div class="msg-content">${data.content}</div>
+                    <div style="font-size: 9px; opacity: 0.5; margin-top: 4px; text-align: right;">Maintenant</div>
+                </div>
+                ${isMe ? `<img src="/static/uploads/${picToUse}" class="avatar-chat">` : ''}
+            </div>`;
+        
+        chatWindow.innerHTML += msgHtml;
+        chatWindow.scrollTop = chatWindow.scrollHeight;
+    });
+
+    function sendInstantMessage() {
+        const input = document.getElementById('msg-input');
+        const text = input.value.trim();
+        if(text === "") return;
+        
+        socket.emit('send_msg', {
+            content: text,
+            recipient_id: otherId
+        });
+        input.value = "";
+    }
+</script>
+
+<!-- STYLE INTERNE (OVERRIDE) -->
+<style>
+    .chat-row { display: flex; margin-bottom: 12px; gap: 10px; align-items: flex-end; width: 100%; }
+    .chat-row.me { justify-content: flex-end; }
+    .chat-row.other { justify-content: flex-start; }
+    
+    .bubble { 
+        max-width: 75%; padding: 10px 15px; font-size: 14px; line-height: 1.5; 
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3); 
+    }
+    
+    /* Ma bulle (Rose) */
+    .me .bubble { 
+        background-color: var(--accent); color: #000; 
+        border-radius: 18px 18px 2px 18px; 
+        font-weight: 500;
+    }
+    
+    /* Sa bulle (Gris sombre) */
+    .other .bubble { 
+        background-color: #20202b; color: #f3f3f6; 
+        border-radius: 18px 18px 18px 2px; 
+        border: 1px solid var(--border);
+    }
+    
+    .avatar-chat { 
+        width: 30px; height: 30px; border-radius: 50%; 
+        object-fit: cover; border: 1px solid var(--border);
+        flex-shrink: 0;
+    }
+
+    .msg-content { word-wrap: break-word; }
+</style>
+
+{% endblock %}

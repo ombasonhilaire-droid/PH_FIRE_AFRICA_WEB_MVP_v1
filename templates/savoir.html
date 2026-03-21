@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card" style="border-left: 5px solid var(--accent);">
+    <h2>📚 Centre de Savoir Panafricain</h2>
+    <p class="muted">Le savoir est une obligation.</p>
+</div>
+
+<div class="grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px;">
+    {% for art in articles %}
+    <div class="card">
+        <span class="badge">{{ art.category }}</span>
+        <h3>{{ art.title }}</h3>
+        <p class="small muted">{{ art.content[:100] }}...</p>
+        <a href="{{ url_for('lecon', k_id=art.id) }}" class="btn" style="width: 100%;">Étudier</a>
+    </div>
+    {% else %}
+    <div class="card"><p>Aucun savoir disponible pour le moment.</p></div>
+    {% endfor %}
+</div>
+{% endblock %}

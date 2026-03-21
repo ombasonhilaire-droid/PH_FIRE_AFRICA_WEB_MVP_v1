@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+    <a href="{{ url_for('academie_domaine', d_id=cursus.domain_id) }}" class="muted small">← Retour au domaine</a>
+    <h1 style="margin-top: 10px; color: var(--accent);">{{ cursus.titre }}</h1>
+    <p class="small muted">Progression : 0% | Statut : En cours</p>
+</div>
+
+{% for item in structure %}
+<div class="card" style="margin-bottom: 20px;">
+    <h3 style="color: var(--ok);">Module {{ item.module.ordre }} : {{ item.module.objectif }}</h3>
+    <div class="hr"></div>
+    <div class="stack" style="margin-top: 10px;">
+        {% for l in item.lecons %}
+        <a href="{{ url_for('academie_lecon', l_id=l.id) }}" 
+           style="display: flex; align-items: center; gap: 15px; padding: 10px; text-decoration: none; border-radius: 10px; background: rgba(255,255,255,0.02); margin-bottom: 5px;">
+            <span style="font-size: 20px;">📖</span>
+            <span style="flex: 1;">{{ l.titre }}</span>
+            <span class="small muted">Commencer →</span>
+        </a>
+        {% endfor %}
+    </div>
+</div>
+{% endfor %}
+{% endblock %}
