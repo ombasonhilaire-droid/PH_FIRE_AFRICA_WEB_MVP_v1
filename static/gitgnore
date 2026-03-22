@@ -1,3 +1,6 @@
-.venv
+.env
 instance/
-static/
+__pycache__/
+*.pyc
+.venv/
+static/uploads/*
