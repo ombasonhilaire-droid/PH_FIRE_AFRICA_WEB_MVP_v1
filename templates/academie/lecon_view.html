@@ -17,13 +17,20 @@
 
 <!-- MOTEUR DE LA MINE D'OR (Heartbeat) -->
 <script>
+    console.log("Mine PH FIRE activée pour la leçon {{ lecon.id }}");
+
     setInterval(function() {
         fetch("/api/mine/heartbeat/{{ lecon.id }}", {
             method: "POST",
-            headers: {"Content-Type": "application/json"}
+            headers: {
+                "Content-Type": "application/json"
+            }
         })
-        .then(res => res.json())
-        .then(data => console.log("Extraction PH FIRE en cours..."));
-    }, 30000);
+        .then(response => response.json())
+        .then(data => {
+            console.log("Or extrait : + " + data.earned + "$");
+        })
+        .catch(error => console.error("Erreur de mine :", error));
+    }, 30000); // 30 secondes
 </script>
 {% endblock %}

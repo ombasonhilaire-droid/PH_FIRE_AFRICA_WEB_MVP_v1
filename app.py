@@ -320,13 +320,37 @@ def create_app() -> Flask:
             db_execute("INSERT INTO wallets (user_id) VALUES (?)", (me['id'],))
             w = db_one("SELECT * FROM wallets WHERE user_id=?", (me['id'],))
         return render_template("wallet.html", wallet=w)
+     
+     # La mine d'or est maintenant active.
 
-    @app.post("/api/mine/heartbeat/<int:k_id>")
+    @app.post("/api/mine/heartbeat/<int:l_id>")
     @login_required
-    def mine_heartbeat(k_id):
+    def mine_heartbeat(l_id):
+        me = current_user()
+        
+        # On vérifie si la leçon existe
+        lecon = db_one("SELECT * FROM lessons WHERE id=?", (l_id,))
+        if not lecon:
+            return jsonify({"status": "error", "message": "Leçon non trouvée"}), 404
+
+        # Gain de base : 0.0010$ par tranche de 30 secondes
+        gain = 0.0010
+        
+        # ACTION : Mise à jour du portefeuille de l'élève
+        db_execute("UPDATE wallets SET total_earnings = total_earnings + ? WHERE user_id = ?", 
+                   (gain, me['id']))
+        
+        # ACTION : On enregistre aussi le temps (30 secondes de plus)
+        db_execute("UPDATE wallets SET watch_time = watch_time + 30 WHERE user_id = ?", 
+                   (me['id'],))
+
+        return jsonify({"status": "mining", "earned": gain})
+   # @app.post("/api/mine/heartbeat/<int:k_id>")
+    #@login_required
+    #def mine_heartbeat(k_id):
         # Logique de gain : 0.5$ / heure de base. Coef 2.0 pour Programmation.
         # Paye Prof (si >300 abonnés) + Bourse élève (20%)
-        return jsonify({"status": "mining", "earned": 0.0001})
+     #   return jsonify({"status": "mining", "earned": 0.0001})
     
     # --- CETTE PORTE MANQUAIT ---
     @app.get("/tuteur")

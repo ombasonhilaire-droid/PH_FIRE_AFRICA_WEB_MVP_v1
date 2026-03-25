@@ -1,18 +1,55 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="card" style="border-left: 5px solid #2bd576;">
-    <h2 style="color: #2bd576;">💰 Mon Portefeuille de Bâtisseur</h2>
-    <div style="font-size: 3em; font-weight: 800; margin: 20px 0;">
-        {{ "%.4f"|format(wallet.total_earnings) }} <span style="font-size: 0.5em; color: var(--muted);">$</span>
-    </div>
-    <p class="muted">Extraction de valeur en cours via le savoir.</p>
-    <div class="hr"></div>
-    <button class="btn" style="background: #2bd576; color: black; width: 100%;">
-        Retirer via M-Pesa / Airtel Money
-    </button>
+<!-- COLONNE GAUCHE : RÉSUMÉ -->
+    <aside class="left-rail">
+        <div class="card" style="text-align: center; padding: 20px;">
+            <img src="{{ url_for('static', filename='uploads/' + (me.profile_pic if me.profile_pic else 'default_avatar.png')) }}" 
+                 class="avatar-large" style="margin: 0 auto 15px; display: block;">
+            <h3 style="font-size: 16px;">{{ me.display_name }}</h3>
+            <p class="muted small">Bâtisseur de Valeur</p>
+        </div>
+    </aside>
+
+    <!-- COLONNE CENTRALE : LE COFFRE-FORT -->
+    <main class="feed-rail">
+        <div class="card" style="border-top: 4px solid var(--ok); background: linear-gradient(135deg, #1b1b25, #050505);">
+            <h2 style="color: var(--ok); margin-bottom: 20px;">💰 Mon Portefeuille de Bâtisseur</h2>
+            
+            <div style="background: rgba(255,255,255,0.03); padding: 30px; border-radius: 15px; text-align: center; border: 1px solid var(--border);">
+                <span class="muted" style="font-size: 14px; display: block; margin-bottom: 10px;">SOLDE ACTUEL</span>
+                <div style="font-size: 3.5em; font-weight: 900; color: var(--text);">
+                    {{ "%.4f"|format(wallet.total_earnings if wallet else 0) }} <span style="font-size: 0.4em; color: var(--muted);">$</span>
+                </div>
+            </div>
+
+            <div style="margin-top: 25px; display: flex; flex-direction: column; gap: 15px;">
+                <button class="btn" style="background: var(--ok); color: #e42c6a; width: 100%; font-weight: 800;" onclick="alert('Le module de retrait M-Pesa est en cours de sécurisation...')">
+                    RETIRER VIA MOBILE MONEY
+                </button>
+                <p class="small muted" style="text-align: center;">Seuil de retrait minimum : 5.00 $</p>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h3>📊 Historique d'extraction</h3>
+            <p class="small muted">Tes gains augmentent à chaque minute passée dans l'Académie.</p>
+            <div class="hr"></div>
+            <div style="display: flex; justify-content: space-between; font-size: 13px;">
+                <span>Dernière session d'étude</span>
+                <span style="color: var(--accent);">+ 0.0010 $</span>
+            </div>
+        </div>
+    </main>
+
+    <!-- COLONNE DROITE : CONSEILS -->
+    <aside class="right-rail">
+        <div class="card" style="border-left: 3px solid var(--accent);">
+            <h4 style="font-size: 14px; color: var(--accent); margin-bottom: 10px;">💡 Conseil de Souveraineté</h4>
+            <p class="small" style="line-height: 1.4;">
+                "L'argent est une conséquence du savoir appliqué. Concentre-toi sur la maîtrise de Python, la mine s'occupe du reste."
+            </p>
+        </div>
+    </aside>
+
 </div>
 {% endblock %}
-
-
-
-<!--{% extends "base.html" %}
