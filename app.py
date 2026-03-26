@@ -37,10 +37,9 @@ def create_app() -> Flask:
     app = Flask(__name__)
     socketio.init_app(app, cors_allowed_origins="*")
     app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-secret-change-me")
-    app.config["MAX_CONTENT_LENGTH"] = 8 * 1024 * 1024  # 8MB upload max
+    app.config["MAX_CONTENT_LENGTH"] = 20 * 1024 * 1024  # 20MB upload max
     app.config["UPLOAD_FOLDER"] = str(UPLOAD_DIR)
     app.config["SECRET_KEY"] = os.getenv('FLASK_SECRET_KEY', "dev-secret")
-
     # --- CONFIGURATION MWALIMU : SOLUTION FINALE ---
     api_key_ia = os.getenv('PH_FIRE_AFRICA_KEY')
     model_ia = None
@@ -65,15 +64,36 @@ def create_app() -> Flask:
         if db is not None:
             db.close()
 
+    #@app.context_processor
+    #def inject_globals():
+      #  return {
+       #     "APP_NAME": APP_NAME,
+       #     "THEME_COLOR": THEME_COLOR,
+       #     "me": current_user(),
+        #    "unread_notifications": count_unread_notifications(),
+       # }
+    # =====================ALERT NOTIFICATION===================
     @app.context_processor
     def inject_globals():
+        me = current_user()
+        unread_notifs = 0
+        unread_msgs = 0
+        
+        if me:
+            # 1. Compter les notifications non lues
+            row_n = db_one("SELECT COUNT(*) AS c FROM notifications WHERE user_id=? AND is_read=0", (me['id'],))
+            unread_notifs = row_n['c'] if row_n else 0
+            
+            # 2. Compter les messages privés non lus
+            row_m = db_one("SELECT COUNT(*) AS c FROM messages WHERE recipient_id=? AND is_read=0", (me['id'],))
+            unread_msgs = row_m['c'] if row_m else 0
+            
         return {
             "APP_NAME": APP_NAME,
-            "THEME_COLOR": THEME_COLOR,
-            "me": current_user(),
-            "unread_notifications": count_unread_notifications(),
+            "me": me,
+            "unread_notifications": unread_notifs,
+            "unread_messages": unread_msgs
         }
-
     # ---------- AUTH ----------
 
     def login_required(view):
@@ -168,7 +188,28 @@ def create_app() -> Flask:
     def explore():
         posts = get_explore_posts()
         return render_template("explore.html", posts=posts)
-
+    
+    # =======IMPLEMENTATION DE LA GESION DES VIDEOS =========
+    @app.post("/post")
+    @login_required
+    def create_post():
+        me = current_user()
+        content = (request.form.get("content") or "").strip()
+        image_filename = None
+        file = request.files.get("image") # On garde le nom 'image' pour le champ
+        
+        if file and file.filename != '':
+            ext = file.filename.rsplit('.', 1)[1].lower()
+            # On autorise images ET vidéos
+            if ext in ['jpg', 'jpeg', 'png', 'gif', 'mp4', 'mov', 'avi']:
+                image_filename = f"{me['id']}_{int(time.time())}.{ext}"
+                file.save(os.path.join(app.config['UPLOAD_FOLDER'], image_filename))
+        
+        if content or image_filename:
+            db_execute("INSERT INTO posts(user_id, content, image_filename, created_at) VALUES (?,?,?,?)",
+                       (me['id'], content, image_filename, utcnow_iso()))
+            flash("Publication réussie ! 🚀", "ok")
+        return redirect(url_for("feed"))
 # --- ACADÉMIE : ACCUEIL (Liste des Domaines) ---
     @app.get("/academie")
     @login_required
@@ -214,32 +255,32 @@ def create_app() -> Flask:
     
     # gestion de post
 
-    @app.post("/post")
-    @login_required
-    def create_post():
-        me = current_user()
-        content = (request.form.get("content") or "").strip()
-        if not content and not request.files.get("image"):
-            flash("Écris quelque chose ou ajoute une image.", "warn")
-            return redirect(request.referrer or url_for("feed"))
-        if len(content) > 500:
-            flash("Post trop long (max 500 caractères).", "error")
-            return redirect(request.referrer or url_for("feed"))
+   # @app.post("/post")
+   # @login_required
+    #def create_post():
+     #   me = current_user()
+    #    content = (request.form.get("content") or "").strip()
+      #  if not content and not request.files.get("image"):
+     #       flash("Écris quelque chose ou ajoute une image.", "warn")
+     #       return redirect(request.referrer or url_for("feed"))
+      #  if len(content) > 500:
+     #       flash("Post trop long (max 500 caractères).", "error")
+      #      return redirect(request.referrer or url_for("feed"))
 
-        image_filename = None
-        image = request.files.get("image")
-        if image and image.filename:
-            safe_name = secure_filename(image.filename)
-            stamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
-            image_filename = f"{me['id']}_{stamp}_{safe_name}"
-            image.save(str(UPLOAD_DIR / image_filename))
+       # image_filename = None
+     #   image = request.files.get("image")
+      #  if image and image.filename:
+      #      safe_name = secure_filename(image.filename)
+      #      stamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
+      #      image_filename = f"{me['id']}_{stamp}_{safe_name}"
+      #      image.save(str(UPLOAD_DIR / image_filename))
 
-        db_execute(
-            "INSERT INTO posts(user_id, content, image_filename, created_at) VALUES (?, ?, ?, ?)",
-            (me["id"], content, image_filename, utcnow_iso()),
-        )
-        flash("Publié ✅", "ok")
-        return redirect(request.referrer or url_for("feed"))
+      #  db_execute(
+      #      "INSERT INTO posts(user_id, content, image_filename, created_at) VALUES (?, ?, ?, ?)",
+      #      (me["id"], content, image_filename, utcnow_iso()),
+      #  )
+      #  flash("Publié ✅", "ok")
+      #  return redirect(request.referrer or url_for("feed"))
     
     #like toggle (insert if not exists, delete if exists)
 
@@ -415,38 +456,81 @@ def create_app() -> Flask:
         join_room(room) 
 
     # SETTINGS / PROFILE
+   # @app.route("/settings", methods=["GET", "POST"])
+   # @login_required
+    #def settings():
+        #me = current_user()
+        #if request.method == "POST":
+        #    display_name = request.form.get("display_name", me['display_name']).strip()
+         #   bio = request.form.get("bio", "").strip()
+            
+            # --- GESTION PHOTO DE PROFIL ---
+          #  file_p = request.files.get("profile_pic")
+         #   filename_p = me['profile_pic']
+         #   if file_p and file_p.filename != '':
+        #        ext = file_p.filename.rsplit('.', 1)[1].lower()
+         #       filename_p = f"avatar_{me['id']}_{int(time.time())}.{ext}"
+        #        file_p.save(os.path.join(app.config['UPLOAD_FOLDER'], filename_p))
+
+            # --- GESTION PHOTO DE COUVERTURE ---
+         #   file_c = request.files.get("cover_pic")
+        #    filename_c = me['cover_pic']
+       #     if file_c and file_c.filename != '':
+              #  ext = file_c.filename.rsplit('.', 1)[1].lower()
+              #  filename_c = f"cover_{me['id']}_{int(time.time())}.{ext}"
+             #   file_c.save(os.path.join(app.config['UPLOAD_FOLDER'], filename_c))
+            
+          #  db_execute("UPDATE users SET display_name=?, bio=?, profile_pic=?, cover_pic=? WHERE id=?", 
+          #             (display_name, bio, filename_p, filename_c, me['id']))
+            
+         #   flash("Profil et Couverture mis à jour ! 🏗️", "ok")
+         #   return redirect(url_for("settings"))
+            
+        #return render_template("settings.html", user=me)
+     # ==============SETTINGS FINALE AVEC GESTION DES IMAGES INCLUSE ================
     @app.route("/settings", methods=["GET", "POST"])
     @login_required
     def settings():
         me = current_user()
         if request.method == "POST":
+            # 1. On initialise TOUTES les variables avec les valeurs actuelles
+            # Cela évite l'erreur "UnboundLocalError"
             display_name = request.form.get("display_name", me['display_name']).strip()
-            bio = request.form.get("bio", "").strip()
-            
-            # --- GESTION PHOTO DE PROFIL ---
-            file_p = request.files.get("profile_pic")
+            bio = request.form.get("bio", me['bio']).strip()
             filename_p = me['profile_pic']
-            if file_p and file_p.filename != '':
-                ext = file_p.filename.rsplit('.', 1)[1].lower()
-                filename_p = f"avatar_{me['id']}_{int(time.time())}.{ext}"
-                file_p.save(os.path.join(app.config['UPLOAD_FOLDER'], filename_p))
-
-            # --- GESTION PHOTO DE COUVERTURE ---
-            file_c = request.files.get("cover_pic")
             filename_c = me['cover_pic']
+
+            # 2. On récupère les fichiers du formulaire
+            file_p = request.files.get("profile_pic")
+            file_c = request.files.get("cover_pic")
+
+            # 3. Traitement de la Photo de Profil
+            if file_p and file_p.filename != '':
+                try:
+                    ext = file_p.filename.rsplit('.', 1)[1].lower()
+                    filename_p = f"avatar_{me['id']}_{int(time.time())}.{ext}"
+                    file_p.save(os.path.join(app.config['UPLOAD_FOLDER'], filename_p))
+                except Exception as e:
+                    print(f"Erreur upload profil: {e}")
+
+            # 4. Traitement de la Photo de Couverture
             if file_c and file_c.filename != '':
-                ext = file_c.filename.rsplit('.', 1)[1].lower()
-                filename_c = f"cover_{me['id']}_{int(time.time())}.{ext}"
-                file_c.save(os.path.join(app.config['UPLOAD_FOLDER'], filename_c))
+                try:
+                    ext = file_c.filename.rsplit('.', 1)[1].lower()
+                    filename_c = f"cover_{me['id']}_{int(time.time())}.{ext}"
+                    file_c.save(os.path.join(app.config['UPLOAD_FOLDER'], filename_c))
+                except Exception as e:
+                    print(f"Erreur upload couverture: {e}")
             
+            # 5. Mise à jour de la base de données
+            # On utilise les noms de fichiers (filename_p/c) et non les objets fichiers (file_p/c)
             db_execute("UPDATE users SET display_name=?, bio=?, profile_pic=?, cover_pic=? WHERE id=?", 
                        (display_name, bio, filename_p, filename_c, me['id']))
             
-            flash("Profil et Couverture mis à jour ! 🏗️", "ok")
+            flash("Profil et Couverture mis à jour avec succès ! 🏗️", "ok")
             return redirect(url_for("settings"))
             
         return render_template("settings.html", user=me)
-
     # ---------- PROFILES / FOLLOW ----------
 
     @app.get("/u/<username>")

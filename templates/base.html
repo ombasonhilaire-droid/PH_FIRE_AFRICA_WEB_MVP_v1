@@ -26,11 +26,22 @@
       <span class="icon">💰</span><span class="nav-text">Économie</span></a>
     <!-- MESSAGERIE (Ajoutée) -->
       <a href="{{ url_for('messages') }}" class="nav-link-icon" title="Messages">
-      <span class="icon">💬</span><span class="nav-text">Messages</span></a>
-      <a href="{{ url_for('notifications') }}" class="nav-link-icon" title="Notifications">
-      <span class="icon">🔔</span>
-      {% if unread_notifications %}<span class="notif-badge"></span>{% endif %}
-      <span class="nav-text">Notifications</span></a>
+    <span class="icon">💬</span>
+    {% if unread_messages > 0 %}
+        <span class="badge-alert">{{ unread_messages }}</span>
+    {% endif %}
+    <span class="nav-text">Messages</span>
+</a>
+
+<!-- NOTIFICATIONS AVEC ALERTE -->
+<a href="{{ url_for('notifications') }}" class="nav-link-icon" title="Notifications">
+    <span class="icon">🔔</span>
+    {% if unread_notifications > 0 %}
+        <span class="badge-alert">{{ unread_notifications }}</span>
+    {% endif %}
+    <span class="nav-text">Notifications</span>
+</a>
+
       <a href="{{ url_for('tuteur_view') }}" class="nav-link-icon" title="IA Mwalimu">
       <span class="icon">🧠</span><span class="nav-text">IA</span></a>
       <a href="{{ url_for('profile', username=me.username) }}" class="nav-link-icon profile-link">

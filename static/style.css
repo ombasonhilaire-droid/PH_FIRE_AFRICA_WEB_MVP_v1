@@ -198,3 +198,101 @@ img { max-width: 100%; height: auto; display: block; object-fit: cover; }
     .profile-banner { height: 100px; }
     .avatar-large { width: 80px; height: 80px; margin-top: -40px; }
 }
+/* --- RÉPARATION DES VIGNETTES DE PROFIL --- */
+.post-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 15px;
+    min-height: 60px; /* Force la visibilité du header */
+}
+
+.avatar-post {
+    width: 42px !important;
+    height: 42px !important;
+    border-radius: 50%;
+    border: 2px solid var(--accent);
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+/* --- OPTIMISATION VIDÉO SOUVERAINE --- */
+.video-container {
+    width: 100%;
+    background: #000;
+    margin: 10px 0;
+    border-radius: 8px;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Format Paysage (16:9) - Standard */
+.video-16-9 {
+    aspect-ratio: 16 / 9;
+}
+
+/* Format Portrait (9:16) - Type TikTok/Reels */
+.video-9-16 {
+    aspect-ratio: 9 / 16;
+    max-width: 300px; /* On limite la largeur pour ne pas manger tout l'écran */
+    margin: 0 auto;
+}
+
+video {
+    width: 100%;
+    height: 100%;
+    max-height: 720px; /* Limite visuelle de résolution */
+    outline: none;
+}
+/* --- FIX FINAL NAVIGATION --- */
+.avatar-nav {
+    width: 32px !important;
+    height: 32px !important;
+    min-width: 32px !important;
+    border-radius: 50% !important;
+    object-fit: cover;
+    border: 1.5px solid var(--accent);
+}
+
+.nav-icons-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Empêcher le texte de pousser les icônes */
+.nav-text {
+    font-size: 10px;
+    margin-top: 2px;
+}
+
+/* --- STYLE DES ALERTES (BADGES) --- */
+.nav-link-icon {
+    position: relative; /* Permet de positionner le badge par rapport à l'icône */
+}
+
+.badge-alert {
+    position: absolute;
+    top: 5px;
+    right: 15px;
+    background-color: var(--accent); /* Ton Rose PH FIRE */
+    color: white;
+    font-size: 10px;
+    font-weight: 900;
+    padding: 2px 6px;
+    border-radius: 10px;
+    border: 2px solid var(--panel); /* Détache le badge du fond */
+    min-width: 18px;
+    text-align: center;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+}
+
+/* Sur mobile, on ajuste la position */
+@media (max-width: 768px) {
+    .badge-alert {
+        right: 5px;
+        top: 2px;
+    }
+}
