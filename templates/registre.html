@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="main-content" style="display: block; max-width: 1000px; margin: 0 auto;">
+    
+    <!-- EN-TÊTE DU REGISTRE -->
+    <div class="card" style="border-bottom: 4px solid var(--accent); background: linear-gradient(to right, #1b1b25, #050505);">
+        <h2 style="color: var(--accent);">📋 Registre Officiel PH FIRE AFRICA</h2>
+        <p class="muted">Le grand livre de la souveraineté numérique et du partage de la richesse.</p>
+    </div>
+
+    <!-- STATISTIQUES ÉCONOMIQUES GLOBALES -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;">
+        <div class="card" style="text-align: center; border-top: 3px solid var(--ok);">
+            <span class="muted small">VALEUR TOTALE DE LA MINE</span>
+            <div style="font-size: 24px; font-weight: 900; color: var(--ok); margin-top: 5px;">{{ "%.4f"|format(mine_totale) }} $</div>
+        </div>
+        <div class="card" style="text-align: center; border-top: 3px solid #4facfe;">
+            <span class="muted small">CONTRIBUTION ÉTAT (TAXE 10%)</span>
+            <div style="font-size: 24px; font-weight: 900; color: #4facfe; margin-top: 5px;">{{ "%.4f"|format(taxe_totale) }} $</div>
+        </div>
+        <div class="card" style="text-align: center; border-top: 3px solid var(--accent);">
+            <span class="muted small">BÂTISSEURS ENRÔLÉS</span>
+            <div style="font-size: 24px; font-weight: 900; color: var(--accent); margin-top: 5px;">{{ batisseurs|length }}</div>
+        </div>
+    </div>
+
+    <!-- TABLEAU DES BÂTISSEURS -->
+    <div class="card">
+        <h3 style="margin-bottom: 15px;">👷 Annuaire des Bâtisseurs de l'Édifice</h3>
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="text-align: left; color: var(--muted); font-size: 12px; border-bottom: 1px solid var(--border);">
+                        <th style="padding: 12px;">NOM DU BÂTISSEUR</th>
+                        <th>RÔLE DANS LA MINE</th>
+                        <th>DISCIPLINE</th>
+                        <th style="text-align: right;">VALEUR EXTRAITE</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for b in batisseurs %}
+                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.03); font-size: 14px;">
+                        <td style="padding: 15px; display: flex; align-items: center; gap: 12px;">
+                            <img src="{{ url_for('static', filename='uploads/' + (b.profile_pic if b.profile_pic else 'default_avatar.png')) }}" 
+                                 class="avatar-chat" style="width: 35px; height: 35px; border: 1px solid var(--accent);">
+                            <div>
+                                <div style="font-weight: bold;">{{ b.display_name }}</div>
+                                <div class="muted small">@{{ b.username }}</div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge" style="background: rgba(255, 45, 141, 0.1); color: var(--accent); border: 1px solid var(--accent); font-size: 10px;">
+                                {{ b.role | upper if b.role else 'APPRENANT' }}
+                            </span>
+                        </td>
+                        <td style="color: var(--ok); font-weight: bold;">{{ b.discipline_score or 100 }}%</td>
+                        <td style="text-align: right; font-weight: 900; color: var(--text);">
+                            {{ "%.4f"|format(b.total_earnings or 0) }} $
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

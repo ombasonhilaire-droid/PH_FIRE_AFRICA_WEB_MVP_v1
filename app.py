@@ -374,8 +374,8 @@ def create_app() -> Flask:
         if not lecon:
             return jsonify({"status": "error", "message": "Leçon non trouvée"}), 404
 
-        # Gain de base : 0.0010$ par tranche de 30 secondes
-        gain = 0.0010
+        # Gain de base : 0.010$ par tranche de 30 secondes
+        gain = 0.010
         
         # ACTION : Mise à jour du portefeuille de l'élève
         db_execute("UPDATE wallets SET total_earnings = total_earnings + ? WHERE user_id = ?", 
@@ -682,6 +682,55 @@ def create_app() -> Flask:
     def seed_demo_command():
         seed_demo()
         print("✅ Données démo créées: comptes demo1 / demo2 (mot de passe: demo123).")
+
+#======================REGISTRE PFA (Transparence)=======
+    @app.get("/registre")
+    @login_required
+    def registre():
+        # On récupère tous les bâtisseurs et leurs gains
+        batisseurs = db_all("SELECT u.*, w.total_earnings FROM users u LEFT JOIN wallets w ON u.id = w.user_id ORDER BY u.created_at DESC")
+        
+        # On calcule la mine totale
+        res_mine = db_one("SELECT SUM(total_earnings) as total FROM wallets")
+        mine_totale = res_mine['total'] if res_mine['total'] else 0
+        
+        # On calcule la part de l'État (10% selon ton algorithme)
+        taxe_totale = mine_totale * 0.10
+        
+        return render_template("registre.html", batisseurs=batisseurs, mine_totale=mine_totale, taxe_totale=taxe_totale)
+
+# ===== PARTAGE DE LA RICHESSE GLOBALE =====
+
+    def repartir_richesse(montant_total, createur_id, apprenant_id):
+    # Définition des parts
+        parts = {
+        'createur': 0.60,
+        'apprenant': 0.10,
+        'plateforme': 0.15,
+        'taxe': 0.10,
+        'depannage': 0.05
+    }
+
+    # Calcul des sommes
+        val_createur = montant_total * parts['createur']
+        val_apprenant = montant_total * parts['apprenant']
+        val_plateforme = montant_total * parts['plateforme']
+        val_taxe = montant_total * parts['taxe']
+        val_depannage = montant_total * parts['depannage']
+
+    # 1. Créditer le Créateur (Professeur/Ingénieur)
+        db_execute("UPDATE wallets SET total_earnings = total_earnings + ? WHERE user_id = ?", (val_createur, createur_id))
+    
+    # 2. Créditer l'Apprenant
+        db_execute("UPDATE wallets SET total_earnings = total_earnings + ? WHERE user_id = ?", (val_apprenant, apprenant_id))
+    
+    # 3. Créditer la Plateforme (Père Hilaire - ID 1 par exemple)
+        db_execute("UPDATE wallets SET total_earnings = total_earnings + ? WHERE user_id = 1", (val_plateforme,))
+    
+    # 4. Enregistrer dans le Registre PFA pour la transparence
+        db_execute("""INSERT INTO pfa_registry (transaction_type, amount, category, created_at) VALUES ('EXTRACTION', ?, 'PARTAGE_GLOBAL', ?)""", (montant_total, utcnow_iso()))
+    
+        return True
 
     # ---------- HELPERS ----------
 
