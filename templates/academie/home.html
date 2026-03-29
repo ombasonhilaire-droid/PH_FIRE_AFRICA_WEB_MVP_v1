@@ -12,10 +12,21 @@
             <h2 style="margin-bottom: 10px;">{{ d.nom }}</h2>
             <p class="small muted" style="line-height: 1.5;">{{ d.description }}</p>
         </div>
+        
+{% if me.username == 'frere' %}
+<div style="margin-bottom: 20px; text-align: right;">
+    <a href="{{ url_for('editeur_lecon') }}" class="btn" style="background: var(--ok); color: rgb(218, 76, 76);">
+        ➕ AJOUTER UNE LEÇON
+    </a>
+</div>
+{% endif %}
+
+
         <div class="hr"></div>
         <a href="{{ url_for('academie_domaine', d_id=d.id) }}" class="btn" style="width: 100%;">
             Entrer dans le Domaine
         </a>
+        
     </div>
     {% else %}
     <div class="card" style="grid-column: 1 / -1; text-align: center; padding: 50px;">

@@ -1,36 +1,98 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="card" style="border-left: 5px solid var(--accent);">
-    <small class="muted">{{ lecon.domaine_nom }} > {{ lecon.cursus_titre }}</small>
-    <h1 style="margin-top: 10px;">{{ lecon.titre }}</h1>
+<div class="main-content" style="display: block;">
+    
+    <!-- EN-TÊTE -->
+    <div class="card" style="border-left: 5px solid var(--accent);">
+        <h1 style="color: var(--accent);">{{ lecon.titre }}</h1>
+        <p class="muted">Section : Informatique de Base</p>
+    </div>
+
+    <!-- SECTION 1 : LE SAVOIR (TEXTE/VIDEO) -->
+    <div class="card">
+        <h3>📖 Leçon</h3>
+        <div class="content" style="line-height: 1.8; margin-top: 15px;">
+            {{ lecon.contenu | safe }}
+        </div>
+    </div>
+
+    <!-- SECTION 2 : LA VALIDATION (QUIZ) -->
+    <div class="card" style="border: 1px solid var(--warn);">
+        <h3>🧠 Contrôle de Connaissance (Quiz)</h3>
+        <p class="small muted">Réponds correctement pour débloquer la suite.</p>
+        <div style="margin-top: 15px;">
+            <p><b>Question :</b> Quel composant est le cerveau de l'ordinateur ?</p>
+            <label><input type="radio" name="q1"> A) La RAM</label><br>
+            <label><input type="radio" name="q1"> B) Le Processeur (CPU)</label><br>
+            <label><input type="radio" name="q1"> C) Le Disque Dur</label>
+        </div>
+    </div>
+
+    <!-- SECTION 3 : L'ACTION (ÉDITEUR DE CODE) -->
+    <div class="card" style="border: 1px solid var(--ok);">
+        <h3>💻 Laboratoire de Programmation</h3>
+        <p class="small muted">Écris ton code Python ci-dessous :</p>
+        
+        <!-- L'Éditeur de code intégré -->
+        <div id="editor" style="height: 200px; width: 100%; border-radius: 8px; margin-top: 10px;">print("Bonjour Afrique !")</div>
+        
+        <button class="btn" style="margin-top: 15px; background: var(--ok); color: black;" onclick="validerTravail()">
+            SOUMETTRE MON TRAVAIL
+        </button>
+    </div>
+
 </div>
 
-<div class="card" style="line-height: 1.8; font-size: 1.1em; min-height: 300px;">
-    {{ lecon.contenu | safe }}
+<!-- Sous la div #editor -->
+<div style="margin-top: 10px; display: flex; gap: 10px;">
+    <button class="btn" style="background: #2bd576; color: black;" onclick="runPython()">▶️ EXÉCUTER LE CODE</button>
 </div>
 
-<div class="card" style="border: 1px dashed var(--ok);">
-    <h3>🛠️ Exercice Obligatoire</h3>
-    <p>Pour valider cette leçon et passer à la suite, résolvez le problème suivant...</p>
-    <button class="btn" style="background: var(--ok); color: black;">Soumettre mon Code</button>
+<div id="terminal-output" style="margin-top: 15px; background: #000; color: #2bd576; padding: 15px; border-radius: 8px; font-family: monospace; min-height: 50px; border: 1px solid var(--border);">
+    > Le résultat s'affichera ici...
 </div>
 
-<!-- MOTEUR DE LA MINE D'OR (Heartbeat) -->
 <script>
-    console.log("Mine PH FIRE activée pour la leçon {{ lecon.id }}");
+function runPython() {
+    const code = editor.getValue();
+    const outputDiv = document.getElementById('terminal-output');
+    outputDiv.innerText = "Exécution en cours...";
 
-    setInterval(function() {
-        fetch("/api/mine/heartbeat/{{ lecon.id }}", {
+    fetch("/api/run_code", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({code: code})
+    })
+    .then(res => res.json())
+    .then(data => {
+        outputDiv.innerText = data.output || "Code exécuté avec succès (pas de sortie).";
+    });
+}
+</script>
+
+<!-- CHARGEMENT DE L'ÉDITEUR ACE (Léger et Pro) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.12/ace.js"></script>
+<script>
+    var editor = ace.edit("editor");
+    editor.setTheme("ace/theme/monokai");
+    editor.session.setMode("ace/mode/python");
+
+    function validerTravail() {
+        const code = editor.getValue();
+        // Appel à ton API de validation
+        fetch("/api/validate_lesson/{{ lecon.id }}", {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            }
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({code: code})
         })
-        .then(response => response.json())
+        .then(res => res.json())
         .then(data => {
-            console.log("Or extrait : + " + data.earned + "$");
-        })
-        .catch(error => console.error("Erreur de mine :", error));
-    }, 3000); // 30 secondes
+            if(data.status === "success") {
+                window.location.href = data.next_url;
+            } else {
+                alert(data.message);
+            }
+        });
+    }
 </script>
 {% endblock %}

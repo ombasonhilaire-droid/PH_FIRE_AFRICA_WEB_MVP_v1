@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container" style="max-width: 800px; margin-top: 20px;">
+    
+    <div class="card" style="border-left: 5px solid var(--accent); background: linear-gradient(to right, #1a1a2e, #0b0b10);">
+        <h2 style="color: var(--accent);">🛠️ La Forge de l'Architecte</h2>
+        <p class="muted">Ici, vous créez les briques de savoir pour l'Afrique.</p>
+    </div>
+
+    <form method="post" class="card">
+        <label class="muted small">Titre de la Leçon</label>
+        <input type="text" name="titre" value="{{ lecon.titre if lecon else '' }}" placeholder="Ex: Introduction/informatique/programmation/Python/C++/JavaScript/HTML/CSS/Variables etc..." required 
+               style="width: 100%; padding: 12px; background: #000; color: white; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 20px;">
+
+        <label class="muted small">Ranger dans le Module</label>
+        <select name="module_id" style="width: 100%; padding: 12px; background: #000; color: white; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 20px;">
+            {% for m in modules %}
+            <option value="{{ m.id }}" {% if lecon and lecon.module_id == m.id %}selected{% endif %}>
+                [{{ m.cursus }}] - {{ m.objectif }}
+            </option>
+            {% endfor %}
+        </select>
+
+        <label class="muted small">Contenu du Cours informatique(autorisé)</label>
+        <textarea name="contenu" rows="12" placeholder="Écrivez votre cours ici..." 
+                  style="width: 100%; padding: 12px; background: #000; color: white; border: 1px solid var(--border); border-radius: 8px; font-family: monospace;">{{ lecon.contenu if lecon else '' }}</textarea>
+        
+        <div style="margin-top: 20px; display: flex; gap: 10px;">
+            <button type="submit" class="btn" style="flex: 1; background: var(--accent); color: white; font-weight: bold;">
+                🚀 ENREGISTRER DANS L'ACADÉMIE
+            </button>
+            <a href="{{ url_for('academie_home') }}" class="btn btn-ghost" style="text-decoration: none;">Annuler</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
