@@ -55,6 +55,50 @@
             </button>
         </div>
     </div>
+<div class="main-content" style="display: block; max-width: 900px; margin: 0 auto;">
+    
+    <!-- Header avec bouton de correction discret -->
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
+        <div>
+            <h1 style="color: var(--accent); font-size: 2.2em; font-weight: 900;">{{ lecon.titre }}</h1>
+            <span class="badge" style="background: var(--panel); color: var(--accent); border: 1px solid var(--accent);">
+                Savoir Certifié PFA
+            </span>
+        </div>
+        {% if me.username == 'frere' %}
+        <a href="{{ url_for('editeur_lecon', l_id=lecon.id) }}" class="btn-ghost" style="padding: 8px 15px; border-radius: 5px; font-size: 11px; color: var(--ok);">
+            ✏️ MODIFIER
+        </a>
+        {% endif %}
+    </div>
+
+    <!-- ZONE MULTIMÉDIA (L'ILLUSTRATEUR) -->
+    {% if lecon.video_filename or lecon.image_filename %}
+    <div class="card" style="padding: 0; overflow: hidden; border: none; background: #000;">
+        {% if lecon.video_filename %}
+            <video controls style="width: 100%; max-height: 500px; display: block;">
+                <source src="{{ url_for('static', filename='uploads/' + lecon.video_filename) }}" type="video/mp4">
+            </video>
+        {% elif lecon.image_filename %}
+            <img src="{{ url_for('static', filename='uploads/' + lecon.image_filename) }}" style="width: 100%; height: auto;">
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- LE TEXTE DU COURS -->
+    <div class="card" style="line-height: 1.8; font-size: 1.1em; letter-spacing: 0.3px; padding: 30px;">
+        <div class="content-body">
+            {{ lecon.contenu | safe }}
+        </div>
+    </div>
+
+    <!-- MOTEUR DE LA MINE -->
+    <script>
+        setInterval(function() {
+            fetch("/api/mine/heartbeat/{{ lecon.id }}", { method: "POST" });
+        }, 30000);
+    </script>
+</div>
 
     <!-- 5. LABORATOIRE DE PROGRAMMATION (ÉDITEUR ACE) -->
     <div class="card" style="border: 1px solid var(--ok); background: rgba(43, 213, 118, 0.02);">

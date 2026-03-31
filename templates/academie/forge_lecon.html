@@ -45,4 +45,43 @@
         </div>
     </form>
 </div>
+
+<div class="container" style="max-width: 800px;">
+    <div class="card" style="border-left: 5px solid var(--accent);">
+        <h2>🛠️ Forge de Savoir Standard</h2>
+        <p class="muted">Créez ou modifiez une brique de l'édifice.</p>
+    </div>
+
+    <form method="post" enctype="multipart/form-data" class="card">
+        <label class="muted small">Titre de la Leçon</label>
+        <input type="text" name="titre" value="{{ lecon.titre if lecon else '' }}" required>
+
+        <label class="muted small">Ranger dans le Module (Classement Automatique)</label>
+        <select name="module_id" style="width: 100%; padding: 12px; background: #000; color: white; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 20px;">
+            {% set current_branche = [] %}
+            {% for m in modules %}
+                <option value="{{ m.id }}" {% if lecon and lecon.module_id == m.id %}selected{% endif %}>
+                    {{ m.branche }} > {{ m.objectif }}
+                </option>
+            {% endfor %}
+        </select>
+
+        <!-- SECTION MULTIMÉDIA (L'ILLUSTRATEUR) -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px; border: 1px dashed var(--border);">
+            <div>
+                <label class="small">🖼️ Image d'illustration</label>
+                <input type="file" name="lesson_image" accept="image/*">
+            </div>
+            <div>
+                <label class="small">🎥 Vidéo du cours</label>
+                <input type="file" name="lesson_video" accept="video/mp4">
+            </div>
+        </div>
+
+        <label class="muted small">Contenu Pédagogique (HTML autorisé)</label>
+        <textarea name="contenu" rows="10" style="font-family: monospace;">{{ lecon.contenu if lecon else '' }}</textarea>
+        
+        <button type="submit" class="btn" style="width: 100%; margin-top: 20px;">🚀 ENREGISTRER LA LEÇON</button>
+    </form>
+</div>
 {% endblock %}
