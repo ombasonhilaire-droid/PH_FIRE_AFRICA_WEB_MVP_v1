@@ -25,10 +25,14 @@
       <a href="{{ url_for('wallet') }}" class="nav-icon" title="Économie">
       <span class="icon">💰</span><span class="nav-text">Économie</span></a>
       <!-- 📋 ICÔNE REGISTRE PFA -->
-    <a href="{{ url_for('registre') }}" class="nav-link-icon" title="Registre des Bâtisseurs">
+<!-- 📋 ICÔNE REGISTRE PFA (SÉCURISÉE PAR PSEUDO) -->
+{% if me.username == 'frere' %}
+<a href="{{ url_for('registre') }}" class="nav-link-icon" title="Bureau du Fondateur">
     <span class="icon">📋</span>
     <span class="nav-text">Registre</span>
-    </a>
+</a>
+{% endif %}
+  
     <!-- MESSAGERIE (Ajoutée) -->
       <a href="{{ url_for('messages') }}" class="nav-link-icon" title="Messages">
     <span class="icon">💬</span>

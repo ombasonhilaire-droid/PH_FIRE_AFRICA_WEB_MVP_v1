@@ -1,3 +1,5 @@
+import sys
+from io import StringIO
 from flask_socketio import SocketIO, emit, join_room
 import google.generativeai as genai
 import time 
@@ -7,7 +9,6 @@ import sqlite3
 from datetime import datetime
 from functools import wraps
 from pathlib import Path
-
 from flask import (
     Flask, g, redirect, render_template, request, session, url_for, flash,
     jsonify
@@ -216,6 +217,49 @@ def create_app() -> Flask:
     def academie_home():
         domaines = db_all("SELECT * FROM domains")
         return render_template("academie/home.html", domaines=domaines)
+    
+# ==================MODIFIER LES LECON =====================
+    # --- FORGE DU CRÉATEUR (ADMIN) ---
+    # --- FORGE : CRÉATION ET MODIFICATION AVEC MULTIMÉDIA ---
+    @app.route("/academie/editeur", methods=["GET", "POST"])
+    @app.route("/academie/editeur/<int:l_id>", methods=["GET", "POST"])
+    @login_required
+    def editeur_lecon(l_id=None):
+        me = current_user()
+        if me['username'] != 'frere': return redirect(url_for('feed'))
+
+        lecon = db_one("SELECT * FROM lessons WHERE id=?", (l_id,)) if l_id else None
+
+        if request.method == "POST":
+            titre = request.form.get("titre")
+            module_id = request.form.get("module_id")
+            contenu = request.form.get("contenu")
+            
+            # Gestion des fichiers (Image et Vidéo de la leçon)
+            img_name = lecon['image_filename'] if lecon else None
+            vid_name = lecon['video_filename'] if lecon else None
+            
+            f_img = request.files.get("lesson_image")
+            if f_img and f_img.filename != '':
+                img_name = f"lecon_img_{int(time.time())}.jpg"
+                f_img.save(os.path.join(app.config['UPLOAD_FOLDER'], img_name))
+
+            f_vid = request.files.get("lesson_video")
+            if f_vid and f_vid.filename != '':
+                vid_name = f"lecon_vid_{int(time.time())}.mp4"
+                f_vid.save(os.path.join(app.config['UPLOAD_FOLDER'], vid_name))
+
+            if l_id:
+                db_execute("UPDATE lessons SET titre=?, module_id=?, contenu=?, image_filename=?, video_filename=? WHERE id=?", 
+                           (titre, module_id, contenu, img_name, vid_name, l_id))
+            else:
+                db_execute("INSERT INTO lessons (titre, module_id, contenu, image_filename, video_filename, exercice_obligatoire) VALUES (?, ?, ?, ?, ?, 1)", 
+                           (titre, module_id, contenu, img_name, vid_name))
+            
+            return redirect(url_for('academie_home'))
+
+        modules = db_all("SELECT m.id, m.objectif, c.titre as cursus FROM modules m JOIN curriculums c ON m.curriculum_id = c.id")
+        return render_template("academie/forge_lecon.html", lecon=lecon, modules=modules)
 
     # --- ACADÉMIE : CURRICULUMS D'UN DOMAINE ---
     @app.get("/academie/domaine/<int:d_id>")
@@ -253,36 +297,55 @@ def create_app() -> Flask:
             WHERE l.id=?""", (l_id,))
         return render_template("academie/lecon_view.html", lecon=lecon)
     
-    # gestion de post
+    #==========SUPPRESSION D'UNE LECON===============
 
-   # @app.post("/post")
-   # @login_required
-    #def create_post():
-     #   me = current_user()
-    #    content = (request.form.get("content") or "").strip()
-      #  if not content and not request.files.get("image"):
-     #       flash("Écris quelque chose ou ajoute une image.", "warn")
-     #       return redirect(request.referrer or url_for("feed"))
-      #  if len(content) > 500:
-     #       flash("Post trop long (max 500 caractères).", "error")
-      #      return redirect(request.referrer or url_for("feed"))
-
-       # image_filename = None
-     #   image = request.files.get("image")
-      #  if image and image.filename:
-      #      safe_name = secure_filename(image.filename)
-      #      stamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
-      #      image_filename = f"{me['id']}_{stamp}_{safe_name}"
-      #      image.save(str(UPLOAD_DIR / image_filename))
-
-      #  db_execute(
-      #      "INSERT INTO posts(user_id, content, image_filename, created_at) VALUES (?, ?, ?, ?)",
-      #      (me["id"], content, image_filename, utcnow_iso()),
-      #  )
-      #  flash("Publié ✅", "ok")
-      #  return redirect(request.referrer or url_for("feed"))
+    @app.post("/academie/supprimer/<int:l_id>")
+    @login_required
+    def supprimer_lecon(l_id):
+        me = current_user()
+        if me['username'] != 'frere': return redirect(url_for('feed'))
     
-    #like toggle (insert if not exists, delete if exists)
+        db_execute("DELETE FROM lessons WHERE id=?", (l_id,))
+        flash("Brique de savoir retirée avec succès. 🗑️", "ok")
+        return redirect(url_for('academie_home'))
+
+    # --- GESTION DES BRANCHES (CURRICULUMS) ---
+    
+    @app.route("/academie/branches", methods=["GET", "POST"])
+    @app.route("/academie/branches/<int:c_id>", methods=["GET", "POST"])
+    @login_required
+    def forge_branches(c_id=None):
+        me = current_user()
+        if me['username'] != 'frere': # Sécurité Fondateur
+            flash("Accès réservé à l'Architecte.", "error")
+            return redirect(url_for('feed'))
+
+        curriculum = None
+        if c_id:
+            curriculum = db_one("SELECT * FROM curriculums WHERE id=?", (c_id,))
+
+        if request.method == "POST":
+            titre = request.form.get("titre")
+            domain_id = request.form.get("domain_id")
+            niveau = request.form.get("niveau")
+            duree = request.form.get("duree")
+
+            if c_id:
+                db_execute("UPDATE curriculums SET titre=?, domain_id=?, niveau=?, duree=? WHERE id=?", 
+                           (titre, domain_id, niveau, duree, c_id))
+                flash(f"Branche '{titre}' mise à jour ! 🌿", "ok")
+            else:
+                db_execute("INSERT INTO curriculums (titre, domain_id, niveau, duree) VALUES (?, ?, ?, ?)", 
+                           (titre, domain_id, niveau, duree))
+                flash(f"Nouvelle branche '{titre}' plantée dans l'Académie ! 🌱", "ok")
+            
+            return redirect(url_for('academie_home'))
+
+        domaines = db_all("SELECT * FROM domains")
+        return render_template("academie/forge_branches.html", curriculum=curriculum, domaines=domaines)
+    
+   
+ # ====== likees et commentaires =====
 
     @app.post("/like/<int:post_id>")
     @login_required
@@ -362,26 +425,21 @@ def create_app() -> Flask:
             w = db_one("SELECT * FROM wallets WHERE user_id=?", (me['id'],))
         return render_template("wallet.html", wallet=w)
      
-     # La mine d'or est maintenant active.
-
+# --- LE MOTEUR UNIQUE DE LA MINE (Version Maître) ---
     @app.post("/api/mine/heartbeat/<int:l_id>")
     @login_required
     def mine_heartbeat(l_id):
         me = current_user()
         
-        # On vérifie si la leçon existe
-        lecon = db_one("SELECT * FROM lessons WHERE id=?", (l_id,))
-        if not lecon:
-            return jsonify({"status": "error", "message": "Leçon non trouvée"}), 404
-
-        # Gain de base : 0.010$ par tranche de 30 secondes
-        gain = 0.010
+        # Gain de base : 0.0010$ par tranche de 30 secondes
+        # On peut ajouter ici une logique de coefficient selon la catégorie plus tard
+        gain = 0.0010
         
-        # ACTION : Mise à jour du portefeuille de l'élève
+        # Mise à jour du portefeuille de l'élève (Bourse d'étude)
         db_execute("UPDATE wallets SET total_earnings = total_earnings + ? WHERE user_id = ?", 
                    (gain, me['id']))
         
-        # ACTION : On enregistre aussi le temps (30 secondes de plus)
+        # Mise à jour du temps d'étude total
         db_execute("UPDATE wallets SET watch_time = watch_time + 30 WHERE user_id = ?", 
                    (me['id'],))
 
@@ -455,81 +513,48 @@ def create_app() -> Flask:
         room = f"chat_{min(me['id'], other_id)}_{max(me['id'], other_id)}"
         join_room(room) 
 
-    # SETTINGS / PROFILE
-   # @app.route("/settings", methods=["GET", "POST"])
-   # @login_required
-    #def settings():
-        #me = current_user()
-        #if request.method == "POST":
-        #    display_name = request.form.get("display_name", me['display_name']).strip()
-         #   bio = request.form.get("bio", "").strip()
-            
-            # --- GESTION PHOTO DE PROFIL ---
-          #  file_p = request.files.get("profile_pic")
-         #   filename_p = me['profile_pic']
-         #   if file_p and file_p.filename != '':
-        #        ext = file_p.filename.rsplit('.', 1)[1].lower()
-         #       filename_p = f"avatar_{me['id']}_{int(time.time())}.{ext}"
-        #        file_p.save(os.path.join(app.config['UPLOAD_FOLDER'], filename_p))
-
-            # --- GESTION PHOTO DE COUVERTURE ---
-         #   file_c = request.files.get("cover_pic")
-        #    filename_c = me['cover_pic']
-       #     if file_c and file_c.filename != '':
-              #  ext = file_c.filename.rsplit('.', 1)[1].lower()
-              #  filename_c = f"cover_{me['id']}_{int(time.time())}.{ext}"
-             #   file_c.save(os.path.join(app.config['UPLOAD_FOLDER'], filename_c))
-            
-          #  db_execute("UPDATE users SET display_name=?, bio=?, profile_pic=?, cover_pic=? WHERE id=?", 
-          #             (display_name, bio, filename_p, filename_c, me['id']))
-            
-         #   flash("Profil et Couverture mis à jour ! 🏗️", "ok")
-         #   return redirect(url_for("settings"))
-            
-        #return render_template("settings.html", user=me)
      # ==============SETTINGS FINALE AVEC GESTION DES IMAGES INCLUSE ================
     @app.route("/settings", methods=["GET", "POST"])
     @login_required
     def settings():
         me = current_user()
         if request.method == "POST":
-            # 1. On initialise TOUTES les variables avec les valeurs actuelles
-            # Cela évite l'erreur "UnboundLocalError"
+            # Récupération des textes
             display_name = request.form.get("display_name", me['display_name']).strip()
             bio = request.form.get("bio", me['bio']).strip()
+            language = request.form.get("language", me['language'])
+            privacy = request.form.get("privacy_level", me['privacy_level'])
+            video_pref = request.form.get("video_pref", me['video_pref'])
+            
             filename_p = me['profile_pic']
             filename_c = me['cover_pic']
 
-            # 2. On récupère les fichiers du formulaire
-            file_p = request.files.get("profile_pic")
-            file_c = request.files.get("cover_pic")
-
-            # 3. Traitement de la Photo de Profil
-            if file_p and file_p.filename != '':
-                try:
-                    ext = file_p.filename.rsplit('.', 1)[1].lower()
+            # Photo de Profil
+            if 'profile_pic' in request.files:
+                f_p = request.files['profile_pic']
+                if f_p.filename != '':
+                    ext = f_p.filename.rsplit('.', 1)[1].lower()
                     filename_p = f"avatar_{me['id']}_{int(time.time())}.{ext}"
-                    file_p.save(os.path.join(app.config['UPLOAD_FOLDER'], filename_p))
-                except Exception as e:
-                    print(f"Erreur upload profil: {e}")
+                    f_p.save(os.path.join(app.config['UPLOAD_FOLDER'], filename_p))
 
-            # 4. Traitement de la Photo de Couverture
-            if file_c and file_c.filename != '':
-                try:
-                    ext = file_c.filename.rsplit('.', 1)[1].lower()
+            # Photo de Couverture
+            if 'cover_pic' in request.files:
+                f_c = request.files['cover_pic']
+                if f_c.filename != '':
+                    ext = f_c.filename.rsplit('.', 1)[1].lower()
                     filename_c = f"cover_{me['id']}_{int(time.time())}.{ext}"
-                    file_c.save(os.path.join(app.config['UPLOAD_FOLDER'], filename_c))
-                except Exception as e:
-                    print(f"Erreur upload couverture: {e}")
+                    f_c.save(os.path.join(app.config['UPLOAD_FOLDER'], filename_c))
+
+            db_execute("""UPDATE users SET 
+                          display_name=?, bio=?, profile_pic=?, cover_pic=?, 
+                          language=?, privacy_level=?, video_pref=? 
+                          WHERE id=?""", 
+                       (display_name, bio, filename_p, filename_c, 
+                        language, privacy, video_pref, me['id']))
             
-            # 5. Mise à jour de la base de données
-            # On utilise les noms de fichiers (filename_p/c) et non les objets fichiers (file_p/c)
-            db_execute("UPDATE users SET display_name=?, bio=?, profile_pic=?, cover_pic=? WHERE id=?", 
-                       (display_name, bio, filename_p, filename_c, me['id']))
-            
-            flash("Profil et Couverture mis à jour avec succès ! 🏗️", "ok")
+            flash("Paramètres enregistrés ! ⚙️", "ok")
             return redirect(url_for("settings"))
-            
+
         return render_template("settings.html", user=me)
     # ---------- PROFILES / FOLLOW ----------
 
@@ -687,18 +712,22 @@ def create_app() -> Flask:
     @app.get("/registre")
     @login_required
     def registre():
-        # On récupère tous les bâtisseurs et leurs gains
-        batisseurs = db_all("SELECT u.*, w.total_earnings FROM users u LEFT JOIN wallets w ON u.id = w.user_id ORDER BY u.created_at DESC")
+        me = current_user()
         
-        # On calcule la mine totale
+        # --- LE VERROU PAR PSEUDO (Plus robuste) ---
+        # Remplace 'frere' par ton vrai nom d'utilisateur (celui écrit sous ton nom)
+        # Si ton pseudo est 'pere_hilaire', écris : me['username'] != 'pere_hilaire'
+        if me['username'] != 'frere': 
+            flash("Accès refusé. Seul le Fondateur peut consulter le Registre National.", "error")
+            return redirect(url_for('feed'))
+        # -------------------------------------------
+
+        batisseurs = db_all("SELECT u.*, w.total_earnings FROM users u LEFT JOIN wallets w ON u.id = w.user_id ORDER BY u.created_at DESC")
         res_mine = db_one("SELECT SUM(total_earnings) as total FROM wallets")
         mine_totale = res_mine['total'] if res_mine['total'] else 0
-        
-        # On calcule la part de l'État (10% selon ton algorithme)
         taxe_totale = mine_totale * 0.10
         
         return render_template("registre.html", batisseurs=batisseurs, mine_totale=mine_totale, taxe_totale=taxe_totale)
-
 # ===== PARTAGE DE LA RICHESSE GLOBALE =====
 
     def repartir_richesse(montant_total, createur_id, apprenant_id):
@@ -731,7 +760,49 @@ def create_app() -> Flask:
         db_execute("""INSERT INTO pfa_registry (transaction_type, amount, category, created_at) VALUES ('EXTRACTION', ?, 'PARTAGE_GLOBAL', ?)""", (montant_total, utcnow_iso()))
     
         return True
+    
+ #=============VALIDATION DE LA LECON ET L'EDITEUR DE CODE INTEGRER============
 
+    @app.post("/api/validate_lesson/<int:l_id>")
+    @login_required
+    def validate_lesson(l_id):
+        me = current_user()
+    # 1. Vérifier la réponse (Quiz ou Code)
+    # Ici, on simule une validation réussie pour le test
+        success = True 
+
+        if success:
+        # 2. Marquer la progression
+            db_execute("INSERT INTO student_progress (student_id, lesson_id, statut) VALUES (?, ?, 'VALIDE')", (me['id'], l_id))
+        
+        # 3. ACTIVER LA MINE (Récompense de réussite)
+        # On utilise ton algorithme : 1$ de valeur créée par la réussite
+            repartir_richesse(1.0, createur_id=1, apprenant_id=me['id'])
+        
+            flash("Félicitations ! Leçon validée et Mine d'Or créditée. 💰", "ok")
+            return jsonify({"status": "success", "next_url": url_for('academie_home')})
+    
+        return jsonify({"status": "error", "message": "Discipline insuffisante. Réessaie !"})
+    
+    # =====PLAY CODE ==============
+    @app.post("/api/run_code")
+    @login_required
+    def run_code():
+        code = request.json.get("code")
+    # On capture la sortie du code (le print)
+        old_stdout = sys.stdout
+        redirected_output = sys.stdout = StringIO()
+    
+        try:
+        # ATTENTION : exec() est puissant, à sécuriser plus tard
+            exec(code)
+            result = redirected_output.getvalue()
+        except Exception as e:
+            result = str(e)
+        finally:
+            sys.stdout = old_stdout
+        
+        return jsonify({"output": result})
     # ---------- HELPERS ----------
 
     def db_conn():
@@ -779,11 +850,10 @@ def create_app() -> Flask:
 
     def current_user():
         uid = session.get("user_id")
-        if not uid:
-            return None
-        # On utilise * pour être sûr de récupérer la bio et la photo
+        if not uid: return None
+        # Le '*' est obligatoire pour récupérer TOUTES les nouvelles colonnes
         return db_one("SELECT * FROM users WHERE id=?", (uid,))
-
+    
     def create_notification(user_id: int, actor_id: int, ntype: str, post_id):
         # ignore self
         if user_id == actor_id:
@@ -916,4 +986,4 @@ app = create_app()
 
 if __name__ == "__main__":
     # Utilisation de socketio.run pour activer le temps réel
-    socketio.run(app, host="0.0.0.0", port=5000, debug=True)
+    socketio.run(app,host='0.0.0.0', port=5000, debug=True)

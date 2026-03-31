@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container" style="max-width: 800px; margin-top: 20px;">
+    
+    <div class="card" style="border-left: 5px solid var(--accent); background: linear-gradient(to right, #1a1a2e, #0b0b10);">
+        <h2 style="color: var(--accent);">🌿 Forge des Branches</h2>
+        <p class="muted">Définissez les filières d'excellence de PH FIRE AFRICA.</p>
+    </div>
+
+    <form method="post" class="card">
+        <label class="muted small">Nom de la Branche (ex: Maîtrise de Java)</label>
+        <input type="text" name="titre" value="{{ curriculum.titre if curriculum else '' }}" placeholder="Ex: Développement Web HTML/CSS" required 
+               style="width: 100%; padding: 12px; background: #000; color: white; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 20px;">
+
+        <label class="muted small">Domaine Parent</label>
+        <select name="domain_id" style="width: 100%; padding: 12px; background: #000; color: white; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 20px;">
+            {% for d in domaines %}
+            <option value="{{ d.id }}" {% if curriculum and curriculum.domain_id == d.id %}selected{% endif %}>
+                {{ d.nom }}
+            </option>
+            {% endfor %}
+        </select>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+            <div>
+                <label class="muted small">Niveau</label>
+                <select name="niveau" style="width: 100%; padding: 12px; background: #000; color: white; border: 1px solid var(--border); border-radius: 8px;">
+                    <option {% if curriculum and curriculum.niveau == 'Débutant' %}selected{% endif %}>Débutant</option>
+                    <option {% if curriculum and curriculum.niveau == 'Intermédiaire' %}selected{% endif %}>Intermédiaire</option>
+                    <option {% if curriculum and curriculum.niveau == 'Expert' %}selected{% endif %}>Expert</option>
+                </select>
+            </div>
+            <div>
+                <label class="muted small">Durée estimée (Heures)</label>
+                <input type="number" name="duree" value="{{ curriculum.duree if curriculum else '10' }}" style="width: 100%; padding: 12px; background: #000; color: white; border: 1px solid var(--border); border-radius: 8px;">
+            </div>
+        </div>
+        
+        <div style="margin-top: 25px; display: flex; gap: 10px;">
+            <button type="submit" class="btn" style="flex: 1;">🚀 ENREGISTRER LA BRANCHE</button>
+            <a href="{{ url_for('academie_home') }}" class="btn btn-ghost">Annuler</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -1,85 +1,119 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="main-content" style="display: block;">
+<div class="main-content" style="display: block; max-width: 900px; margin: 0 auto;">
     
-    <!-- EN-TÊTE -->
-    <div class="card" style="border-left: 5px solid var(--accent);">
-        <h1 style="color: var(--accent);">{{ lecon.titre }}</h1>
-        <p class="muted">Section : Informatique de Base</p>
+    <!-- 1. EN-TÊTE DE LA SALLE D'ÉTUDE -->
+    <div class="card" style="display: flex; justify-content: space-between; align-items: center; border-left: 5px solid var(--accent);">
+        <div>
+            <small class="muted">Académie PH FIRE > Section : Informatique de Base</small>
+            <h1 style="color: var(--accent); margin: 5px 0;">{{ lecon.titre }}</h1>
+        </div>
+        
+        <!-- BOUTON MODIFIER (Visible uniquement par le Fondateur) -->
+        {% if me.username == 'frere' %}
+        <a href="{{ url_for('editeur_lecon', l_id=lecon.id) }}" class="btn" style="background: var(--warn); color: rgb(20, 218, 53); font-size: 12px; font-weight: 800;">
+            ✏️ CORRIGER LA LEÇON
+        </a>
+        {% endif %}
     </div>
 
-    <!-- SECTION 1 : LE SAVOIR (TEXTE/VIDEO) -->
+    <!-- 2. SECTION MULTIMÉDIA (Vidéo ou Image de synthèse) -->
+    {% if lecon.video_filename %}
+    <div class="card" style="padding: 0; overflow: hidden; background: #c0b2b271; border: 1px solid var(--border);">
+        <video width="100%" controls style="max-height: 480px; display: block;">
+            <source src="{{ url_for('static', filename='uploads/' + lecon.video_filename) }}" type="video/mp4">
+            Votre navigateur ne supporte pas la lecture vidéo.
+        </video>
+    </div>
+    {% endif %}
+
+    {% if lecon.image_filename %}
+    <div class="card" style="padding: 0; overflow: hidden; border: 1px solid var(--border);">
+        <img src="{{ url_for('static', filename='uploads/' + lecon.image_filename) }}" style="width: 100%; height: auto; display: block;">
+    </div>
+    {% endif %}
+
+    <!-- 3. LE SAVOIR (CONTENU TEXTUEL) -->
     <div class="card">
-        <h3>📖 Leçon</h3>
-        <div class="content" style="line-height: 1.8; margin-top: 15px;">
+        <h3 style="display: flex; align-items: center; gap: 10px;">📖 Leçon du jour</h3>
+        <div class="content" style="line-height: 1.8; margin-top: 15px; font-size: 1.05em; color: #f3f3f6;">
             {{ lecon.contenu | safe }}
         </div>
     </div>
 
-    <!-- SECTION 2 : LA VALIDATION (QUIZ) -->
-    <div class="card" style="border: 1px solid var(--warn);">
-        <h3>🧠 Contrôle de Connaissance (Quiz)</h3>
-        <p class="small muted">Réponds correctement pour débloquer la suite.</p>
-        <div style="margin-top: 15px;">
-            <p><b>Question :</b> Quel composant est le cerveau de l'ordinateur ?</p>
-            <label><input type="radio" name="q1"> A) La RAM</label><br>
-            <label><input type="radio" name="q1"> B) Le Processeur (CPU)</label><br>
-            <label><input type="radio" name="q1"> C) Le Disque Dur</label>
+    <!-- 4. CONTRÔLE DE DISCIPLINE (QUIZ MANUEL) -->
+    <div class="card" style="border: 1px solid var(--warn); background: rgba(255, 204, 0, 0.02);">
+        <h3 style="color: var(--warn);">🧠 Contrôle de Discipline</h3>
+        <p style="margin: 15px 0;"><b>{{ lecon.quiz_question if lecon.quiz_question else "Question de validation en attente..." }}</b></p>
+        
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <button class="btn btn-ghost" onclick="verifierQuiz('A')" style="flex: 1; min-width: 200px; text-align: left;">
+                A) {{ lecon.opt_a if lecon.opt_a else "Option A" }}
+            </button>
+            <button class="btn btn-ghost" onclick="verifierQuiz('B')" style="flex: 1; min-width: 200px; text-align: left;">
+                B) {{ lecon.opt_b if lecon.opt_b else "Option B" }}
+            </button>
         </div>
     </div>
 
-    <!-- SECTION 3 : L'ACTION (ÉDITEUR DE CODE) -->
-    <div class="card" style="border: 1px solid var(--ok);">
-        <h3>💻 Laboratoire de Programmation</h3>
-        <p class="small muted">Écris ton code Python ci-dessous :</p>
+    <!-- 5. LABORATOIRE DE PROGRAMMATION (ÉDITEUR ACE) -->
+    <div class="card" style="border: 1px solid var(--ok); background: rgba(43, 213, 118, 0.02);">
+        <h3 style="color: var(--ok);">💻 Laboratoire de Programmation</h3>
+        <p class="small muted">Pratiquez immédiatement ce que vous avez appris :</p>
         
-        <!-- L'Éditeur de code intégré -->
-        <div id="editor" style="height: 200px; width: 100%; border-radius: 8px; margin-top: 10px;">print("Bonjour Afrique !")</div>
+        <div id="editor" style="height: 250px; width: 100%; border-radius: 8px; margin-top: 15px; font-size: 14px; border: 1px solid var(--border);">print("L'Afrique se lève par le code !")</div>
         
-        <button class="btn" style="margin-top: 15px; background: var(--ok); color: black;" onclick="validerTravail()">
-            SOUMETTRE MON TRAVAIL
-        </button>
+        <div style="margin-top: 15px; display: flex; gap: 10px;">
+            <button class="btn" style="background: var(--ok); color: black;" onclick="runPython()">▶️ EXÉCUTER LE CODE</button>
+            <button class="btn btn-ghost" onclick="validerTravail()">📤 SOUMETTRE MON TRAVAIL</button>
+        </div>
+
+        <!-- SORTIE DU TERMINAL -->
+        <div id="terminal-output" style="margin-top: 15px; background: #000; color: #2bd576; padding: 15px; border-radius: 8px; font-family: 'Courier New', monospace; min-height: 60px; border: 1px solid var(--border); white-space: pre-wrap; font-size: 13px;">
+            > Le résultat de ton code s'affichera ici...
+        </div>
     </div>
 
 </div>
 
-<!-- Sous la div #editor -->
-<div style="margin-top: 10px; display: flex; gap: 10px;">
-    <button class="btn" style="background: #2bd576; color: black;" onclick="runPython()">▶️ EXÉCUTER LE CODE</button>
-</div>
-
-<div id="terminal-output" style="margin-top: 15px; background: #000; color: #2bd576; padding: 15px; border-radius: 8px; font-family: monospace; min-height: 50px; border: 1px solid var(--border);">
-    > Le résultat s'affichera ici...
-</div>
-
-<script>
-function runPython() {
-    const code = editor.getValue();
-    const outputDiv = document.getElementById('terminal-output');
-    outputDiv.innerText = "Exécution en cours...";
-
-    fetch("/api/run_code", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({code: code})
-    })
-    .then(res => res.json())
-    .then(data => {
-        outputDiv.innerText = data.output || "Code exécuté avec succès (pas de sortie).";
-    });
-}
-</script>
-
-<!-- CHARGEMENT DE L'ÉDITEUR ACE (Léger et Pro) -->
+<!-- SCRIPTS DE PUISSANCE -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.12/ace.js"></script>
 <script>
+    // Initialisation de l'éditeur Ace
     var editor = ace.edit("editor");
     editor.setTheme("ace/theme/monokai");
     editor.session.setMode("ace/mode/python");
 
+    // 1. Moteur d'exécution du code
+    function runPython() {
+        const code = editor.getValue();
+        const outputDiv = document.getElementById('terminal-output');
+        outputDiv.innerText = "Exécution sur le MacBook Pro...";
+
+        fetch("/api/run_code", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({code: code})
+        })
+        .then(res => res.json())
+        .then(data => {
+            outputDiv.innerText = data.output || "Code exécuté (aucune sortie texte).";
+        });
+    }
+
+    // 2. Vérification du Quiz
+    function verifierQuiz(choix) {
+        const bonneReponse = "{{ lecon.correct_opt }}";
+        if (choix === bonneReponse) {
+            alert("Excellent ! Tu as la discipline d'un ingénieur. +0.0010$ extraits !");
+        } else {
+            alert("Discipline insuffisante. Relis bien le cours, Bâtisseur.");
+        }
+    }
+
+    // 3. Soumission finale
     function validerTravail() {
         const code = editor.getValue();
-        // Appel à ton API de validation
         fetch("/api/validate_lesson/{{ lecon.id }}", {
             method: "POST",
             headers: {"Content-Type": "application/json"},
@@ -94,5 +128,17 @@ function runPython() {
             }
         });
     }
+
+    // 4. MOTEUR DE LA MINE (Heartbeat toutes les 30s)
+    setInterval(function() {
+        fetch("/api/mine/heartbeat/{{ lecon.id }}", { method: "POST" })
+        .then(res => res.json())
+        .then(data => console.log("Mine PH FIRE active : +0.0010$"));
+    }, 30000);
 </script>
+
+<style>
+    .btn-ghost:hover { background: rgba(255,255,255,0.05); border-color: var(--accent); }
+    .content h3 { color: var(--accent); margin-top: 20px; }
+</style>
 {% endblock %}

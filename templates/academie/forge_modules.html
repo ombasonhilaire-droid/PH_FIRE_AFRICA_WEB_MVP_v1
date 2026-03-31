@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+    <h2>📦 Créer un Tiroir de Rangement (Module)</h2>
+    <form method="post">
+        <label>Dans quel Cursus ?</label>
+        <select name="curriculum_id" style="width: 100%; padding: 10px; background: #000; color: white;">
+            {% for c in cursus %}
+            <option value="{{ c.id }}">{{ c.titre }}</option>
+            {% endfor %}
+        </select>
+        <label>Nom du Module (ex: Informatique de base)</label>
+        <input name="objectif" placeholder="Ce que l'étudiant va maîtriser..." required>
+        <label>Ordre d'apparition (1, 2, 3...)</label>
+        <input type="number" name="ordre" value="1">
+        <button type="submit" class="btn" style="width: 100%; margin-top: 20px;">CRÉER LE RANGEMENT</button>
+    </form>
+</div>
+{% endblock %}

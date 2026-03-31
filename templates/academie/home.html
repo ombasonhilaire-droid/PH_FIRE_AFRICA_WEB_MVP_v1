@@ -14,8 +14,11 @@
         </div>
         
 {% if me.username == 'frere' %}
-<div style="margin-bottom: 20px; text-align: right;">
-    <a href="{{ url_for('editeur_lecon') }}" class="btn" style="background: var(--ok); color: rgb(218, 76, 76);">
+<div style="margin-bottom: 20px; display: flex; gap: 10px; justify-content: flex-end;">
+    <a href="{{ url_for('forge_branches') }}" class="btn" style="background: var(--accent); color: white;">
+        🌿 MODIFIER LES BRANCHES
+    </a>
+    <a href="{{ url_for('editeur_lecon') }}" class="btn" style="background: var(--ok); color: rgb(15, 180, 64);">
         ➕ AJOUTER UNE LEÇON
     </a>
 </div>
