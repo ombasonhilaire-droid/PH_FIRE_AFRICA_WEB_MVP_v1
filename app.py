@@ -179,10 +179,18 @@ def create_app() -> Flask:
     @app.get("/feed")
     @login_required
     def feed():
+    # 1. Récupération de l'identité du bâtisseur connecté
         me = current_user()
+    
+    # 2. Extraction du minerai (les posts) avec les infos des auteurs
+    # On passe l'ID de 'me' pour savoir si on a "liké" les posts
         posts = get_feed_posts(me["id"])
+    
+    # 3. Suggestions de nouveaux frères à suivre
         suggestions = get_suggestions(me["id"])
-        return render_template("feed.html", posts=posts, suggestions=suggestions)
+    
+    # 4. Rendu de l'édifice
+        return render_template("feed.html", posts=posts, suggestions=suggestions, me=me)
 # exploration : posts populaires tous utilisateurs
     @app.get("/explore")
     @login_required
@@ -871,20 +879,23 @@ def create_app() -> Flask:
         row = db_one("SELECT COUNT(*) AS c FROM notifications WHERE user_id=? AND is_read=0", (me["id"],))
         return int(row["c"] or 0)
 
-    def get_feed_posts(user_id: int):
-        # posts du user + ceux qu'il suit
-        return db_all(
-            "WITH followed AS (SELECT followed_id FROM follows WHERE follower_id=?) "
-            "SELECT p.*, u.username, u.display_name, "
-            "(SELECT COUNT(*) FROM likes WHERE post_id=p.id) AS like_count, "
-            "(SELECT COUNT(*) FROM comments WHERE post_id=p.id) AS comment_count, "
-            "(SELECT 1 FROM likes WHERE user_id=? AND post_id=p.id) AS liked_by_me "
-            "FROM posts p "
-            "JOIN users u ON u.id=p.user_id "
-            "WHERE p.user_id=? OR p.user_id IN (SELECT followed_id FROM followed) "
-            "ORDER BY p.created_at DESC LIMIT 80",
-            (user_id, user_id, user_id),
-        )
+    def get_feed_posts(user_id):
+    # Cette requête SQL est une brique de précision :
+    # Elle va chercher le post + le nom de l'auteur + la PHOTO de l'auteur
+        query = """
+        SELECT 
+            p.*, 
+            u.username, 
+            u.display_name, 
+            u.profile_pic, -- C'EST CETTE LIGNE QUI RÉPARE LA PHOTO D'ONCLE
+            (SELECT COUNT(*) FROM likes WHERE post_id = p.id) AS like_count,
+            (SELECT COUNT(*) FROM comments WHERE post_id = p.id) AS comment_count,
+            (SELECT 1 FROM likes WHERE user_id = ? AND post_id = p.id) AS liked_by_me
+        FROM posts p
+        JOIN users u ON u.id = p.user_id
+        ORDER BY p.created_at DESC 
+        LIMIT 50"""
+        return db_all(query, (user_id,))
 
     def get_explore_posts():
         me = current_user()
@@ -907,29 +918,21 @@ def create_app() -> Flask:
             (user_id, user_id),
         )
 
-    def get_message_threads(user_id: int):
-        # Liste des interlocuteurs avec dernier message
-        rows = db_all(
-            "WITH allmsgs AS ("
-            "  SELECT CASE WHEN sender_id=? THEN recipient_id ELSE sender_id END AS other_id, "
-            "         MAX(created_at) AS last_ts "
-            "  FROM messages "
-            "  WHERE sender_id=? OR recipient_id=? "
-            "  GROUP BY other_id"
-            ") "
-            "SELECT u.username, u.display_name, "
-            "       (SELECT content FROM messages m "
-            "        WHERE ((m.sender_id=? AND m.recipient_id=u.id) OR (m.sender_id=u.id AND m.recipient_id=?)) "
-            "        ORDER BY created_at DESC LIMIT 1) AS last_content, "
-            "       (SELECT COUNT(*) FROM messages m "
-            "        WHERE m.sender_id=u.id AND m.recipient_id=? AND m.is_read=0) AS unread_count, "
-            "       allmsgs.last_ts AS last_ts "
-            "FROM allmsgs "
-            "JOIN users u ON u.id=allmsgs.other_id "
-            "ORDER BY allmsgs.last_ts DESC",
-            (user_id, user_id, user_id, user_id, user_id, user_id),
-        )
-        return rows
+    def get_message_threads(user_id):
+    # Cette requête récupère : l'autre utilisateur, sa photo, le dernier message et le compte des non-lus
+        query = """
+        SELECT 
+            u.id, u.username, u.display_name, u.profile_pic,
+            m.content as last_msg, m.created_at,
+            (SELECT COUNT(*) FROM messages WHERE sender_id = u.id AND recipient_id = ? AND is_read = 0) as unread_count
+        FROM users u
+        JOIN messages m ON (m.sender_id = u.id AND m.recipient_id = ?) 
+                        OR (m.sender_id = ? AND m.recipient_id = u.id)
+        WHERE u.id != ?
+        GROUP BY u.id
+        ORDER BY m.created_at DESC
+    """
+        return db_all(query, (user_id, user_id, user_id, user_id))
 
     def seed_demo():
         # create two demo users if none

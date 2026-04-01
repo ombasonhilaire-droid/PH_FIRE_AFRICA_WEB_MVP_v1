@@ -1,26 +1,45 @@
 {% extends "base.html" %}
-{% set title = "Messagerie" %}
 {% block content %}
-<div class="card">
-  <h2>Messagerie</h2>
-  <p class="muted">Discussions privées (MVP). Clique sur un nom pour ouvrir le fil.</p>
-</div>
-
-{% if threads|length == 0 %}
-  <div class="card">
-    <p class="muted">Aucune discussion. Va sur un profil ou un post et clique ✉️.</p>
-  </div>
-{% endif %}
-
-{% for t in threads %}
-  <a class="card thread" href="{{ url_for('thread', username=t.username) }}">
-    <div>
-      <div class="thread-name">{{ t.display_name }}</div>
-      <div class="muted small">@{{ t.username }} • {{ t.last_content or "" }}</div>
+<div class="container" style="max-width: 700px;">
+    <div class="card" style="border-left: 5px solid var(--accent);">
+        <h2>💬 Messagerie des Bâtisseurs</h2>
+        <p class="muted small">Échangez le savoir en toute confidentialité.</p>
     </div>
-    {% if t.unread_count and t.unread_count|int > 0 %}
-      <span class="badge">{{ t.unread_count }}</span>
-    {% endif %}
-  </a>
-{% endfor %}
+
+    <div class="message-list">
+        {% for t in threads %}
+        <a href="{{ url_for('thread', username=t.username) }}" class="card thread-item" style="text-decoration: none; display: flex; align-items: center; gap: 15px; padding: 15px; transition: 0.3s;">
+            
+            <!-- Avatar du correspondant -->
+            <div style="position: relative;">
+                <img src="{{ url_for('static', filename='uploads/' + (t.profile_pic if t.profile_pic else 'default_avatar.png')) }}" 
+                class="avatar-chat{% if t.unread_count > 0 %} avatar-unread{% endif %}" style="width: 55px; height: 55px;">
+                {% if t.unread_count > 0 %}
+                <span class="badge-unread-mobile">{{ t.unread_count }}</span>
+                {% endif %}
+            </div>
+
+            <!-- Contenu du message -->
+            <div style="flex: 1; min-width: 0;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                    <span style="font-weight: 800; color: var(--text);">{{ t.display_name }}</span>
+                    <span class="muted" style="font-size: 10px;">{{ t.created_at[11:16] }}</span>
+                </div>
+                <p class="muted small" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 0;">
+                    {% if t.unread_count > 0 %}<b style="color: var(--text);">{% endif %}
+                    {{ t.last_msg }}
+                    {% if t.unread_count > 0 %}</b>{% endif %}
+                </p>
+            </div>
+
+            <!-- Flèche d'entrée -->
+            <div style="color: var(--border);">❯</div>
+        </a>
+        {% else %}
+        <div class="card" style="text-align: center; padding: 40px;">
+            <p class="muted">Aucune discussion pour le moment. Allez sur le profil d'un bâtisseur pour lui écrire.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
 {% endblock %}

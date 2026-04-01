@@ -66,13 +66,12 @@
         </div>
 
         <!-- LISTE DES POSTS -->
-        {% for p in posts %}
+        {% for p in posts %}, l'image doit utiliser p.profile_pic.
         <div class="card post-card" style="padding: 0;">
             <div class="post-header" style="padding: 15px; display: flex; gap: 12px; align-items: center;">
-                <img src="{{ url_for('static', filename='uploads/' + (p.profile_pic if p.profile_pic else 'default_avatar.png')) }}" 
-                     style="width:48px; height:48px; border-radius:50%; object-fit: cover;"
-                     onerror="this.src='https://ui-avatars.com/api/?name={{ p.display_name }}&background=333&color=fff'">
-                <div style="flex:1;">
+                <img src="{{ url_for('static', filename='uploads/' + (p.profile_pic if p.profile_pic else 'default_avatar.png')) }}" class="avatar-post" 
+                    style="width:48px; height:48px; border-radius:50%; object-fit: cover; border: 2px solid var(--accent);"
+                    onerror="this.src='https://ui-avatars.com/api/?name={{ p.display_name }}&background=ff2d8d&color=fff'">
                     <div style="font-weight: 800; font-size: 14px; color: var(--text);">{{ p.display_name }}</div>
                     <div class="muted small">@{{ p.username }} • {{ p.created_at[:10] }}</div>
                 </div>
