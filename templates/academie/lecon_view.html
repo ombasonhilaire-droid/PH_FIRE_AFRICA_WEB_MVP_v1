@@ -1,120 +1,71 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="main-content" style="display: block; max-width: 900px; margin: 0 auto;">
+<div class="container" style="max-width: 900px; margin: 0 auto;">
     
-    <!-- 1. EN-TÊTE DE LA SALLE D'ÉTUDE -->
-    <div class="card" style="display: flex; justify-content: space-between; align-items: center; border-left: 5px solid var(--accent);">
-        <div>
-            <small class="muted">Académie PH FIRE > Section : Informatique de Base</small>
-            <h1 style="color: var(--accent); margin: 5px 0;">{{ lecon.titre }}</h1>
-        </div>
+    <!-- 1. NAVIGATION & ACTIONS RAPIDES -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <a href="{{ url_for('academie_home') }}" class="muted small" style="text-decoration: none;">← Retour au cursus</a>
         
-        <!-- BOUTON MODIFIER (Visible uniquement par le Fondateur) -->
         {% if me.username == 'frere' %}
-        <a href="{{ url_for('editeur_lecon', l_id=lecon.id) }}" class="btn" style="background: var(--warn); color: rgb(20, 218, 53); font-size: 12px; font-weight: 800;">
-            ✏️ CORRIGER LA LEÇON
+        <a href="{{ url_for('editeur_lecon', l_id=lecon.id) }}" class="btn" style="background: var(--warn); color: #000; font-size: 11px; padding: 5px 15px; font-weight: 800;">
+            ✏️ CORRIGER LE DOCUMENT
         </a>
         {% endif %}
     </div>
 
-    <!-- 2. SECTION MULTIMÉDIA (Vidéo ou Image de synthèse) -->
-    {% if lecon.video_filename %}
-    <div class="card" style="padding: 0; overflow: hidden; background: #c0b2b271; border: 1px solid var(--border);">
-        <video width="100%" controls style="max-height: 480px; display: block;">
-            <source src="{{ url_for('static', filename='uploads/' + lecon.video_filename) }}" type="video/mp4">
-            Votre navigateur ne supporte pas la lecture vidéo.
-        </video>
-    </div>
-    {% endif %}
+    <!-- 2. LE DOCUMENT ACADÉMIQUE (STYLE WORD / PAPIER) -->
+    <article class="lesson-paper" style="background: var(--panel); padding: 40px; border-radius: 8px; box-shadow: var(--shadow); border-top: 4px solid var(--accent);">
+        
+        <header style="margin-bottom: 30px; border-bottom: 1px solid var(--border); padding-bottom: 20px;">
+            <span class="badge" style="margin-bottom: 10px;">Savoir Certifié PFA</span>
+            <h1 style="color: var(--accent); font-size: 2.5em; font-weight: 900; margin: 0;">{{ lecon.titre }}</h1>
+            <p class="muted small">Section : Informatique de Base • Temps d'étude estimé : 15 min</p>
+        </header>
 
-    {% if lecon.image_filename %}
-    <div class="card" style="padding: 0; overflow: hidden; border: 1px solid var(--border);">
-        <img src="{{ url_for('static', filename='uploads/' + lecon.image_filename) }}" style="width: 100%; height: auto; display: block;">
-    </div>
-    {% endif %}
+        <!-- ZONE MULTIMÉDIA INTÉGRÉE -->
+        {% if lecon.video_filename or lecon.image_filename %}
+        <div style="margin-bottom: 30px; border-radius: 12px; overflow: hidden; background: #000; border: 1px solid var(--border);">
+            {% if lecon.video_filename %}
+                <video controls style="width: 100%; max-height: 450px; display: block;">
+                    <source src="{{ url_for('static', filename='uploads/' + lecon.video_filename) }}" type="video/mp4">
+                </video>
+            {% elif lecon.image_filename %}
+                <img src="{{ url_for('static', filename='uploads/' + lecon.image_filename) }}" style="width: 100%; height: auto;">
+            {% endif %}
+        </div>
+        {% endif %}
 
-    <!-- 3. LE SAVOIR (CONTENU TEXTUEL) -->
-    <div class="card">
-        <h3 style="display: flex; align-items: center; gap: 10px;">📖 Leçon du jour</h3>
-        <div class="content" style="line-height: 1.8; margin-top: 15px; font-size: 1.05em; color: #f3f3f6;">
+        <!-- CORPS DU COURS -->
+        <div class="document-content" style="line-height: 1.8; font-size: 1.15em; color: #f3f3f6;">
             {{ lecon.contenu | safe }}
         </div>
-    </div>
+    </article>
 
-    <!-- 4. CONTRÔLE DE DISCIPLINE (QUIZ MANUEL) -->
-    <div class="card" style="border: 1px solid var(--warn); background: rgba(255, 204, 0, 0.02);">
-        <h3 style="color: var(--warn);">🧠 Contrôle de Discipline</h3>
-        <p style="margin: 15px 0;"><b>{{ lecon.quiz_question if lecon.quiz_question else "Question de validation en attente..." }}</b></p>
+    <!-- 3. ESPACE DE VALIDATION (QUIZ) -->
+    <div class="card" style="margin-top: 30px; border: 1px solid var(--warn); background: rgba(255, 204, 0, 0.02);">
+        <h3 style="color: var(--warn); display: flex; align-items: center; gap: 10px;">🧠 Contrôle de Discipline</h3>
+        <p style="margin: 15px 0; font-weight: bold;">{{ lecon.quiz_question if lecon.quiz_question else "Question de validation..." }}</p>
         
-        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-            <button class="btn btn-ghost" onclick="verifierQuiz('A')" style="flex: 1; min-width: 200px; text-align: left;">
-                A) {{ lecon.opt_a if lecon.opt_a else "Option A" }}
-            </button>
-            <button class="btn btn-ghost" onclick="verifierQuiz('B')" style="flex: 1; min-width: 200px; text-align: left;">
-                B) {{ lecon.opt_b if lecon.opt_b else "Option B" }}
-            </button>
-        </div>
-    </div>
-<div class="main-content" style="display: block; max-width: 900px; margin: 0 auto;">
-    
-    <!-- Header avec bouton de correction discret -->
-    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
-        <div>
-            <h1 style="color: var(--accent); font-size: 2.2em; font-weight: 900;">{{ lecon.titre }}</h1>
-            <span class="badge" style="background: var(--panel); color: var(--accent); border: 1px solid var(--accent);">
-                Savoir Certifié PFA
-            </span>
-        </div>
-        {% if me.username == 'frere' %}
-        <a href="{{ url_for('editeur_lecon', l_id=lecon.id) }}" class="btn-ghost" style="padding: 8px 15px; border-radius: 5px; font-size: 11px; color: var(--ok);">
-            ✏️ MODIFIER
-        </a>
-        {% endif %}
-    </div>
-
-    <!-- ZONE MULTIMÉDIA (L'ILLUSTRATEUR) -->
-    {% if lecon.video_filename or lecon.image_filename %}
-    <div class="card" style="padding: 0; overflow: hidden; border: none; background: #000;">
-        {% if lecon.video_filename %}
-            <video controls style="width: 100%; max-height: 500px; display: block;">
-                <source src="{{ url_for('static', filename='uploads/' + lecon.video_filename) }}" type="video/mp4">
-            </video>
-        {% elif lecon.image_filename %}
-            <img src="{{ url_for('static', filename='uploads/' + lecon.image_filename) }}" style="width: 100%; height: auto;">
-        {% endif %}
-    </div>
-    {% endif %}
-
-    <!-- LE TEXTE DU COURS -->
-    <div class="card" style="line-height: 1.8; font-size: 1.1em; letter-spacing: 0.3px; padding: 30px;">
-        <div class="content-body">
-            {{ lecon.contenu | safe }}
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+            <button class="btn btn-ghost" onclick="verifierQuiz('A')" style="text-align: left; padding: 15px;">A) {{ lecon.opt_a }}</button>
+            <button class="btn btn-ghost" onclick="verifierQuiz('B')" style="text-align: left; padding: 15px;">B) {{ lecon.opt_b }}</button>
         </div>
     </div>
 
-    <!-- MOTEUR DE LA MINE -->
-    <script>
-        setInterval(function() {
-            fetch("/api/mine/heartbeat/{{ lecon.id }}", { method: "POST" });
-        }, 30000);
-    </script>
-</div>
-
-    <!-- 5. LABORATOIRE DE PROGRAMMATION (ÉDITEUR ACE) -->
-    <div class="card" style="border: 1px solid var(--ok); background: rgba(43, 213, 118, 0.02);">
-        <h3 style="color: var(--ok);">💻 Laboratoire de Programmation</h3>
-        <p class="small muted">Pratiquez immédiatement ce que vous avez appris :</p>
+    <!-- 4. LABORATOIRE DE CODE (ACTION) -->
+    <div class="card" style="margin-top: 20px; border: 1px solid var(--ok); background: rgba(43, 213, 118, 0.02);">
+        <h3 style="color: var(--ok); display: flex; align-items: center; gap: 10px;">💻 Laboratoire de Programmation</h3>
+        <p class="small muted">Pratiquez immédiatement pour graver le savoir :</p>
         
-        <div id="editor" style="height: 250px; width: 100%; border-radius: 8px; margin-top: 15px; font-size: 14px; border: 1px solid var(--border);">print("L'Afrique se lève par le code !")</div>
+        <div id="editor" style="height: 250px; width: 100%; border-radius: 8px; margin-top: 15px; border: 1px solid var(--border); font-size: 14px;">print("L'Afrique se lève par le code !")</div>
         
         <div style="margin-top: 15px; display: flex; gap: 10px;">
-            <button class="btn" style="background: var(--ok); color: black;" onclick="runPython()">▶️ EXÉCUTER LE CODE</button>
-            <button class="btn btn-ghost" onclick="validerTravail()">📤 SOUMETTRE MON TRAVAIL</button>
+            <button class="btn" style="background: var(--ok); color: #000;" onclick="runPython()">▶️ EXÉCUTER</button>
+            <button class="btn btn-ghost" onclick="validerTravail()">📤 SOUMETTRE</button>
         </div>
 
-        <!-- SORTIE DU TERMINAL -->
-        <div id="terminal-output" style="margin-top: 15px; background: #000; color: #2bd576; padding: 15px; border-radius: 8px; font-family: 'Courier New', monospace; min-height: 60px; border: 1px solid var(--border); white-space: pre-wrap; font-size: 13px;">
-            > Le résultat de ton code s'affichera ici...
+        <div id="terminal-output" style="margin-top: 15px; background: #000; color: #2bd576; padding: 15px; border-radius: 8px; font-family: monospace; min-height: 60px; border: 1px solid var(--border); white-space: pre-wrap;">
+            > Console prête...
         </div>
     </div>
 
@@ -123,66 +74,45 @@
 <!-- SCRIPTS DE PUISSANCE -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.12/ace.js"></script>
 <script>
-    // Initialisation de l'éditeur Ace
+    // Initialisation Ace Editor
     var editor = ace.edit("editor");
     editor.setTheme("ace/theme/monokai");
     editor.session.setMode("ace/mode/python");
 
-    // 1. Moteur d'exécution du code
+    // 1. Exécution du code
     function runPython() {
         const code = editor.getValue();
-        const outputDiv = document.getElementById('terminal-output');
-        outputDiv.innerText = "Exécution sur le MacBook Pro...";
-
+        const out = document.getElementById('terminal-output');
+        out.innerText = "Exécution en cours...";
         fetch("/api/run_code", {
             method: "POST",
             headers: {"Content-Type": "application/json"},
             body: JSON.stringify({code: code})
         })
         .then(res => res.json())
-        .then(data => {
-            outputDiv.innerText = data.output || "Code exécuté (aucune sortie texte).";
-        });
+        .then(data => { out.innerText = data.output || "Exécuté."; });
     }
 
-    // 2. Vérification du Quiz
+    // 2. Vérification Quiz
     function verifierQuiz(choix) {
-        const bonneReponse = "{{ lecon.correct_opt }}";
-        if (choix === bonneReponse) {
-            alert("Excellent ! Tu as la discipline d'un ingénieur. +0.0010$ extraits !");
+        if (choix === "{{ lecon.correct_opt }}") {
+            alert("Excellent ! Discipline validée. +0.0010$ extraits !");
         } else {
-            alert("Discipline insuffisante. Relis bien le cours, Bâtisseur.");
+            alert("Discipline insuffisante. Relisez le document.");
         }
     }
 
-    // 3. Soumission finale
-    function validerTravail() {
-        const code = editor.getValue();
-        fetch("/api/validate_lesson/{{ lecon.id }}", {
-            method: "POST",
-            headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({code: code})
-        })
-        .then(res => res.json())
-        .then(data => {
-            if(data.status === "success") {
-                window.location.href = data.next_url;
-            } else {
-                alert(data.message);
-            }
-        });
-    }
-
-    // 4. MOTEUR DE LA MINE (Heartbeat toutes les 30s)
+    // 3. MOTEUR DE LA MINE (Unifié)
     setInterval(function() {
         fetch("/api/mine/heartbeat/{{ lecon.id }}", { method: "POST" })
         .then(res => res.json())
-        .then(data => console.log("Mine PH FIRE active : +0.0010$"));
+        .then(data => console.log("Mine active..."));
     }, 30000);
 </script>
 
 <style>
-    .btn-ghost:hover { background: rgba(255,255,255,0.05); border-color: var(--accent); }
-    .content h3 { color: var(--accent); margin-top: 20px; }
+    .lesson-paper h2 { color: var(--accent); margin-top: 30px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+    .lesson-paper h3 { color: var(--ok); margin-top: 20px; }
+    .code-snippet { background: #000; color: #2bd576; padding: 15px; border-radius: 8px; font-family: monospace; margin: 20px 0; border-left: 4px solid var(--accent); }
 </style>
-{% endblock %}
+{% endblock %}`

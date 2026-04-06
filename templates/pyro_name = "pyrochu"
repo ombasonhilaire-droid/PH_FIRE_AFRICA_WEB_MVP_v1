@@ -1,0 +1,3 @@
+pyro_name = "pyrochu"
+pyro_xp, pyro_power, pyro_hp = 1800, 70, 120
+

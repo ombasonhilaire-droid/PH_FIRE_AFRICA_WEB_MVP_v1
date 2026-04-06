@@ -10,7 +10,7 @@ from datetime import datetime
 from functools import wraps
 from pathlib import Path
 from flask import (
-    Flask, g, redirect, render_template, request, session, url_for, flash,
+Flask, g, redirect, render_template, request, session, url_for, flash,
     jsonify
 )
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -118,7 +118,7 @@ def create_app() -> Flask:
 
     @app.post("/signup")
     def signup_post():
-        username = (request.form.get("username") or "").strip()
+        username = (request.form.get("username") or"").strip()
         display_name = (request.form.get("display_name") or "").strip() or username
         identifier = (request.form.get("identifier") or "").strip()
         password = request.form.get("password") or ""
@@ -227,7 +227,7 @@ def create_app() -> Flask:
         return render_template("academie/home.html", domaines=domaines)
     
 # ==================MODIFIER LES LECON =====================
-    # --- FORGE DU CRÉATEUR (ADMIN) ---
+  
     # --- FORGE : CRÉATION ET MODIFICATION AVEC MULTIMÉDIA ---
     @app.route("/academie/editeur", methods=["GET", "POST"])
     @app.route("/academie/editeur/<int:l_id>", methods=["GET", "POST"])
@@ -717,6 +717,7 @@ def create_app() -> Flask:
         print("✅ Données démo créées: comptes demo1 / demo2 (mot de passe: demo123).")
 
 #======================REGISTRE PFA (Transparence)=======
+
     @app.get("/registre")
     @login_required
     def registre():
@@ -793,6 +794,7 @@ def create_app() -> Flask:
         return jsonify({"status": "error", "message": "Discipline insuffisante. Réessaie !"})
     
     # =====PLAY CODE ==============
+
     @app.post("/api/run_code")
     @login_required
     def run_code():

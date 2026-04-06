@@ -206,3 +206,60 @@ img { max-width: 100%; height: auto; display: block; object-fit: cover; }
     flex-direction: column;
     gap: 10px;
 }
+
+/* --- STYLE DOCUMENT ACADÉMIQUE --- */
+.lesson-paper {
+    background: var(--panel);
+    padding: 40px; /* Larges marges comme sur Word */
+    border-radius: 4px;
+    line-height: 1.8;
+    font-size: 1.1em;
+    color: #e0e0e0;
+    box-shadow: var(--shadow);
+    max-width: 850px;
+    margin: 0 auto;
+}
+
+/* Titres à l'intérieur du cours */
+.lesson-paper h2 { color: var(--accent); margin-top: 30px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+.lesson-paper h3 { color: var(--ok); margin-top: 20px; }
+
+/* Blocs de Code (La Forge) */
+.code-snippet {
+    background: #000000;
+    color: #2bd576;
+    padding: 15px;
+    border-radius: 8px;
+    font-family: 'Fira Code', monospace;
+    margin: 20px 0;
+    border-left: 4px solid var(--accent);
+    overflow-x: auto;
+    position: relative;
+}
+
+/* Code à l'intérieur d'une phrase */
+.inline-code {
+    background: rgba(255, 45, 141, 0.1);
+    color: var(--accent);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: monospace;
+}
+
+/* Images Illustratrices */
+.illustration {
+    width: 100%;
+    margin: 25px 0;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+}
+
+.caption {
+    text-align: center;
+    font-size: 0.9em;
+    color: var(--muted);
+    margin-top: -15px;
+    margin-bottom: 20px;
+    font-style: italic;
+}
