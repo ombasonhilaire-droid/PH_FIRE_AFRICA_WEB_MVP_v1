@@ -173,7 +173,17 @@ def create_app() -> Flask:
         session.clear()
         flash("Déconnecté.", "ok")
         return redirect(url_for("index"))
-
+    
+#========GUIDE D'UTILISATION RAPIDE========
+    @app.get("/guide")
+    @login_required
+    def guide_utilisation():
+        return render_template("guide.html")
+    
+ # =============A PROPOS DE LA PLATEFORME=========
+    @app.get("/a-propos")
+    def a_propos():
+        return render_template("about.html")
     # ---------- FEED / POSTS ----------
 
     @app.get("/feed")

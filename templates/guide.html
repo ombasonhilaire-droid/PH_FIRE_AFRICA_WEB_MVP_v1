@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container" style="max-width: 800px;">
+    <div class="card" style="border-left: 5px solid var(--accent); background: linear-gradient(to right, #1a1a2e, #0b0b10);">
+        <h1 style="color: var(--accent);">📖 Guide de Prise en Main</h1>
+        <p class="muted">Apprenez à dompter l'infrastructure PH FIRE AFRICA.</p>
+    </div>
+
+    <!-- SECTION 1 : LE RÉSEAU -->
+    <div class="card">
+        <h3>🤝 1. Le Réseau Social</h3>
+        <p>Utilisez le <b>Fil d'Actualité</b> pour partager vos avancées. Chaque post peut contenir du texte, des images ou des vidéos techniques. Cliquez sur <b>+ Suivre</b> pour bâtir votre réseau de collaborateurs.</p>
+    </div>
+
+    <!-- SECTION 2 : L'ACADÉMIE -->
+    <div class="card">
+        <h3>📚 2. L'Académie d'Élite</h3>
+        <p>Allez dans la section <b>Éducation</b>. Choisissez un domaine (ex: Programmation) et suivez les leçons dans l'ordre. 
+        <br><br>⚠️ <b>Discipline :</b> Vous devez répondre au Quiz ou valider l'exercice de code pour prouver votre maîtrise avant de passer à la suite.</p>
+    </div>
+
+    <!-- SECTION 3 : LA MINE D'OR -->
+    <div class="card" style="border: 1px solid var(--ok);">
+        <h3>💰 3. Extraire de la Valeur (La Mine)</h3>
+        <p>PH FIRE récompense votre temps de cerveau. 
+        <ul>
+            <li><b>Apprenants :</b> Tant que vous lisez une leçon, votre Wallet augmente.</li>
+            <li><b>Professeurs :</b> Vous gagnez des commissions sur chaque élève qui étudie votre cours.</li>
+        </ul>
+        Consultez votre <b>Portefeuille</b> pour voir votre richesse monter en temps réel.</p>
+    </div>
+
+    <!-- SECTION 4 : MWALIMU -->
+    <div class="card">
+        <h3>🧠 4. L'IA Mwalimu</h3>
+        <p>Si vous êtes bloqué sur un code Python ou un concept, cliquez sur l'icône 🧠. Mwalimu vous guidera sans donner la solution brute, pour forger votre intelligence.</p>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container" style="max-width: 800px;">
+    <article class="lesson-paper" style="padding: 50px; border-top: 4px solid var(--accent);">
+        <h1 style="text-align: center; color: var(--accent); font-size: 3em;">PH FIRE AFRICA</h1>
+        <p style="text-align: center; font-style: italic;" class="muted">"Le savoir est une obligation, la générosité est un choix."</p>
+        
+        <div class="hr"></div>
+
+        <h2>Notre Vision</h2>
+        <p>PH FIRE AFRICA est née d'une question simple du Fondateur <b>OMBASON Hilaire</b> : <i>"Pourquoi pas moi ?"</i>. Nous refusons d'être de simples consommateurs de technologies étrangères. Nous bâtissons nos propres outils pour sécuriser nos informations et planifier notre avenir.</p>
+
+        <h2>L'Infrastructure</h2>
+        <p>Ce système a été forgé sur un MacBook Pro 2012 recyclé sous Linux Mint, prouvant que le génie africain n'a pas besoin de luxe pour créer de la puissance. C'est une Académie Numérique d'Informatique Pure dédiée à la jeunesse du continent.</p>
+
+        <div style="margin-top: 50px; text-align: center;">
+            <a href="{{ url_for('signup') }}" class="btn">REJOINDRE L'ÉDIFICE</a>
+        </div>
+    </article>
+</div>
+{% endblock %}

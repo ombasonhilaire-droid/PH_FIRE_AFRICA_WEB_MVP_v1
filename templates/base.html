@@ -12,7 +12,7 @@
     <!--LE LOGO PFA (CLIQUABLE POR REVENIR A L'ACCUEIL)-->
      <a href="{{ url_for('feed') }}" class="nav-logo">PH_FIRE_AFRICA</a>
     <a href="{{ url_for('feed') }}" class="logo-pfa">PFA</a>
-
+    
  <!-- RECHERCHE (Ajoutée) -->
   </div>
       <nav class="nav-icons-group">
@@ -24,7 +24,10 @@
       <span class="icon">📚</span><span class="nav-text">Éducation</span></a>
       <a href="{{ url_for('wallet') }}" class="nav-icon" title="Économie">
       <span class="icon">💰</span><span class="nav-text">Économie</span></a>
-
+        <a href="{{ url_for('guide_utilisation') }}" class="nav-link-icon" title="Guide d'utilisation">
+      <span class="icon">❓</span>
+      <span class="nav-text">Aide</span>
+    </a>
 <!-- 📋 ICÔNE REGISTRE PFA (SÉCURISÉE PAR PSEUDO) -->
 {% if me.username == 'frere' %}
 <a href="{{ url_for('registre') }}" class="nav-link-icon" title="Bureau du Fondateur">
@@ -56,6 +59,7 @@
       <a href="{{ url_for('profile', username=me.username) }}" class="nav-link-icon profile-link">
       <img src="{{ url_for('static', filename='uploads/' ~ me.profile_pic) }}" class="avatar-nav" onerror="this.src='https://ui-avatars.com/api/?name={{ me.display_name }}&background=ff2d8d&color=fff'">
       <span class="nav-text">Moi ▼</span></a>
+      <a href="{{ url_for('a_propos') }}" class="muted small">À propos de PFA</a>
     </nav>
   </div>
   </header>
