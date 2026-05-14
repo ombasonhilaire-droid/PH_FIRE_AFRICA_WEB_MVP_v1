@@ -10,7 +10,7 @@
 <div class="card" style="background: rgba(255, 204, 0, 0.05); border: 1px solid var(--warn);">
     <h3>🧠 Créer le Quiz de validation</h3>
     <label class="small">Question du Quiz</label>
-    <input type="text" name="quiz_question" value="{{ lecon.quiz_question if lecon else '' }}" placeholder="Ex: Quelle est la capitale du Congo ?">
+    <input type="text" name="quiz_question" value="{{ lecon.quiz_question if lecon else '' }}" placeholder="Ex: Qu'en pesnsez-vous de la programmation ?">
     
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
         <input type="text" name="opt_a" value="{{ lecon.opt_a if lecon else '' }}" placeholder="Option A">

@@ -1,3 +1,5 @@
+import psycopg2
+from psycopg2.extras import RealDictCursor
 import sys
 from io import StringIO
 from flask_socketio import SocketIO, emit, join_room
@@ -828,8 +830,14 @@ def create_app() -> Flask:
     def db_conn():
         db = getattr(g, "db", None)
         if db is None:
-            db = sqlite3.connect(DB_PATH)
-            db.row_factory = sqlite3.Row
+        # Remplace les infos par celles créées à l'étape 2
+            db = psycopg2.connect(
+            dbname="ph_fire_db",
+            user="ph_admin",
+            password="ton_mot_de_passe",
+            host="localhost",
+            cursor_factory=RealDictCursor # Pour garder l'accès par nom de colonne
+        )
             g.db = db
         return db
 
@@ -982,8 +990,7 @@ def create_app() -> Flask:
             (u1["id"], "Prochaine étape: paiements Mobile Money, marketplace, IA…", None),
         ]
         for uid, content, img in posts:
-            db_execute("INSERT INTO posts(user_id, content, image_filename, created_at) VALUES (?, ?, ?, ?)",
-                       (uid, content, img, utcnow_iso()))
+            db_execute("INSERT INTO posts(user_id, content, image_filename, created_at) VALUES (?, ?, ?, ?)",(uid, content, img, utcnow_iso()))
 
     # run demo seed once (only when empty)
     @app.before_request
