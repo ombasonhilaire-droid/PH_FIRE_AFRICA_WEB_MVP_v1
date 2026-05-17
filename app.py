@@ -7,7 +7,6 @@ import google.generativeai as genai
 import time 
 import os
 import re
-import sqlite3
 from datetime import datetime
 from functools import wraps
 from pathlib import Path
@@ -28,7 +27,7 @@ UPLOAD_DIR = BASE_DIR / "static" / "uploads"
 
 USERNAME_RE = re.compile(r"^[a-zA-Z0-9_]{3,20}$")
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
-PHONE_RE = re.compile(r"^\+?\d{6,15}$")
+PHONE_RE = re.compile(r"^\+%s\d{6,15}$")
 socketio = SocketIO()
 
 
@@ -40,7 +39,7 @@ def create_app() -> Flask:
     app = Flask(__name__)
     socketio.init_app(app, cors_allowed_origins="*")
     app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-secret-change-me")
-    app.config["MAX_CONTENT_LENGTH"] = 20 * 1024 * 1024  # 20MB upload max
+    app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024  # 50MB upload max
     app.config["UPLOAD_FOLDER"] = str(UPLOAD_DIR)
     app.config["SECRET_KEY"] = os.getenv('FLASK_SECRET_KEY', "dev-secret")
     # --- CONFIGURATION MWALIMU : SOLUTION FINALE ---
@@ -57,25 +56,12 @@ def create_app() -> Flask:
             print(f"❌ Erreur d'allumage : {e}")
 
 
-    @app.before_request
-    def _ensure_db():
-        init_db_if_needed()
-
     @app.teardown_appcontext
     def close_db(_exc):
         db = g.pop("db", None)
         if db is not None:
             db.close()
 
-    #@app.context_processor
-    #def inject_globals():
-      #  return {
-       #     "APP_NAME": APP_NAME,
-       #     "THEME_COLOR": THEME_COLOR,
-       #     "me": current_user(),
-        #    "unread_notifications": count_unread_notifications(),
-       # }
-    # =====================ALERT NOTIFICATION===================
     @app.context_processor
     def inject_globals():
         me = current_user()
@@ -84,11 +70,11 @@ def create_app() -> Flask:
         
         if me:
             # 1. Compter les notifications non lues
-            row_n = db_one("SELECT COUNT(*) AS c FROM notifications WHERE user_id=? AND is_read=0", (me['id'],))
+            row_n = db_one("SELECT COUNT(*) AS c FROM notifications WHERE user_id=%s AND is_read=0", (me['id'],))
             unread_notifs = row_n['c'] if row_n else 0
             
             # 2. Compter les messages privés non lus
-            row_m = db_one("SELECT COUNT(*) AS c FROM messages WHERE recipient_id=? AND is_read=0", (me['id'],))
+            row_m = db_one("SELECT COUNT(*) AS c FROM messages WHERE recipient_id=%s AND is_read=0", (me['id'],))
             unread_msgs = row_m['c'] if row_m else 0
             
         return {
@@ -136,17 +122,16 @@ def create_app() -> Flask:
             return redirect(url_for("signup"))
 
         pw_hash = generate_password_hash(password)
-        try:
-            db_execute(
-                "INSERT INTO users(username, identifier, display_name, bio, password_hash, created_at) "
-                "VALUES (?, ?, ?, '', ?, ?)",
-                (username.lower(), identifier, display_name, pw_hash, utcnow_iso()),
+        try:    
+            db_execute("INSERT INTO users(username, identifier, display_name, bio, password_hash, created_at) VALUES (%s, %s, %s, '', %s, %s)",
+        (username.lower(), identifier, display_name, pw_hash, utcnow_iso()),
             )
-        except sqlite3.IntegrityError:
+        except Exception as e: # <-- Remplace sqlite3.IntegrityError par Exception as e
+            print(f"❌ ERREUR INSCRIPTION : {e}")
             flash("Ce nom d'utilisateur ou cet identifiant existe déjà.", "error")
             return redirect(url_for("signup"))
 
-        user = db_one("SELECT * FROM users WHERE username = ?", (username.lower(),))
+        user = db_one("SELECT * FROM users WHERE username = %s", (username.lower(),))
         session["user_id"] = user["id"]
         flash("Bienvenue sur PH FIRE AFRICA !", "ok")
         return redirect(url_for("feed"))
@@ -160,8 +145,8 @@ def create_app() -> Flask:
         identifier = (request.form.get("identifier") or "").strip()
         password = request.form.get("password") or ""
         next_url = (request.form.get("next") or "").strip() or url_for("feed")
-
-        user = db_one("SELECT * FROM users WHERE identifier = ? OR username = ?", (identifier, identifier.lower()))
+    
+        user = db_one("SELECT * FROM users WHERE identifier = %s OR username = %s", (identifier, identifier.lower()))
         if not user or not check_password_hash(user["password_hash"], password):
             flash("Identifiant ou mot de passe incorrect.", "error")
             return redirect(url_for("login"))
@@ -227,8 +212,8 @@ def create_app() -> Flask:
                 file.save(os.path.join(app.config['UPLOAD_FOLDER'], image_filename))
         
         if content or image_filename:
-            db_execute("INSERT INTO posts(user_id, content, image_filename, created_at) VALUES (?,?,?,?)",
-                       (me['id'], content, image_filename, utcnow_iso()))
+            db_execute("INSERT INTO posts(user_id, content, image_filename, created_at) VALUES (%s, %s, %s, %s)",
+           (me['id'], content, image_filename, utcnow_iso()))
             flash("Publication réussie ! 🚀", "ok")
         return redirect(url_for("feed"))
 # --- ACADÉMIE : ACCUEIL (Liste des Domaines) ---
@@ -248,7 +233,7 @@ def create_app() -> Flask:
         me = current_user()
         if me['username'] != 'frere': return redirect(url_for('feed'))
 
-        lecon = db_one("SELECT * FROM lessons WHERE id=?", (l_id,)) if l_id else None
+        lecon = db_one("SELECT * FROM lessons WHERE id=%s", (l_id,)) if l_id else None
 
         if request.method == "POST":
             titre = request.form.get("titre")
@@ -270,10 +255,10 @@ def create_app() -> Flask:
                 f_vid.save(os.path.join(app.config['UPLOAD_FOLDER'], vid_name))
 
             if l_id:
-                db_execute("UPDATE lessons SET titre=?, module_id=?, contenu=?, image_filename=?, video_filename=? WHERE id=?", 
+                db_execute("UPDATE lessons SET titre=%s, module_id=%s, contenu=%s, image_filename=%s, video_filename=%s WHERE id=%s", 
                            (titre, module_id, contenu, img_name, vid_name, l_id))
             else:
-                db_execute("INSERT INTO lessons (titre, module_id, contenu, image_filename, video_filename, exercice_obligatoire) VALUES (?, ?, ?, ?, ?, 1)", 
+                db_execute("INSERT INTO lessons (titre, module_id, contenu, image_filename, video_filename, exercice_obligatoire) VALUES (%s, %s, %s, %s, %s, 1)", 
                            (titre, module_id, contenu, img_name, vid_name))
             
             return redirect(url_for('academie_home'))
@@ -285,21 +270,21 @@ def create_app() -> Flask:
     @app.get("/academie/domaine/<int:d_id>")
     @login_required
     def academie_domaine(d_id):
-        domaine = db_one("SELECT * FROM domains WHERE id=?", (d_id,))
-        cursus = db_all("SELECT * FROM curriculums WHERE domain_id=?", (d_id,))
+        domaine = db_one("SELECT * FROM domains WHERE id=%s", (d_id,))
+        cursus = db_all("SELECT * FROM curriculums WHERE domain_id=%s", (d_id,))
         return render_template("academie/domaine.html", domaine=domaine, cursus=cursus)
 
     # --- ACADÉMIE : STRUCTURE D'UN CURSUS (Modules & Leçons) ---
     @app.get("/academie/cursus/<int:c_id>")
     @login_required
     def academie_cursus(c_id):
-        cursus = db_one("SELECT * FROM curriculums WHERE id=?", (c_id,))
+        cursus = db_one("SELECT * FROM curriculums WHERE id=%s", (c_id,))
         # On récupère les modules et leurs leçons
-        modules = db_all("SELECT * FROM modules WHERE curriculum_id=? ORDER BY ordre ASC", (c_id,))
+        modules = db_all("SELECT * FROM modules WHERE curriculum_id=%s ORDER BY ordre ASC", (c_id,))
         # Pour chaque module, on récupère ses leçons
         structure = []
         for m in modules:
-            lecons = db_all("SELECT id, titre FROM lessons WHERE module_id=? ORDER BY id ASC", (m['id'],))
+            lecons = db_all("SELECT id, titre FROM lessons WHERE module_id=%s ORDER BY id ASC", (m['id'],))
             structure.append({'module': m, 'lecons': lecons})
         
         return render_template("academie/cursus.html", cursus=cursus, structure=structure)
@@ -314,7 +299,7 @@ def create_app() -> Flask:
             JOIN modules m ON l.module_id = m.id 
             JOIN curriculums c ON m.curriculum_id = c.id
             JOIN domains d ON c.domain_id = d.id
-            WHERE l.id=?""", (l_id,))
+            WHERE l.id=%s""", (l_id,))
         return render_template("academie/lecon_view.html", lecon=lecon)
     
     #==========SUPPRESSION D'UNE LECON===============
@@ -325,7 +310,7 @@ def create_app() -> Flask:
         me = current_user()
         if me['username'] != 'frere': return redirect(url_for('feed'))
     
-        db_execute("DELETE FROM lessons WHERE id=?", (l_id,))
+        db_execute("DELETE FROM lessons WHERE id=%s", (l_id,))
         flash("Brique de savoir retirée avec succès. 🗑️", "ok")
         return redirect(url_for('academie_home'))
 
@@ -342,7 +327,7 @@ def create_app() -> Flask:
 
         curriculum = None
         if c_id:
-            curriculum = db_one("SELECT * FROM curriculums WHERE id=?", (c_id,))
+            curriculum = db_one("SELECT * FROM curriculums WHERE id=%s", (c_id,))
 
         if request.method == "POST":
             titre = request.form.get("titre")
@@ -351,11 +336,11 @@ def create_app() -> Flask:
             duree = request.form.get("duree")
 
             if c_id:
-                db_execute("UPDATE curriculums SET titre=?, domain_id=?, niveau=?, duree=? WHERE id=?", 
+                db_execute("UPDATE curriculums SET titre=%s, domain_id=%s, niveau=%s, duree=%s WHERE id=%s", 
                            (titre, domain_id, niveau, duree, c_id))
                 flash(f"Branche '{titre}' mise à jour ! 🌿", "ok")
             else:
-                db_execute("INSERT INTO curriculums (titre, domain_id, niveau, duree) VALUES (?, ?, ?, ?)", 
+                db_execute("INSERT INTO curriculums (titre, domain_id, niveau, duree) VALUES (%s, %s, %s, %s)", 
                            (titre, domain_id, niveau, duree))
                 flash(f"Nouvelle branche '{titre}' plantée dans l'Académie ! 🌱", "ok")
             
@@ -371,15 +356,15 @@ def create_app() -> Flask:
     @login_required
     def toggle_like(post_id: int):
         me = current_user()
-        liked = db_one("SELECT 1 FROM likes WHERE user_id=? AND post_id=?", (me["id"], post_id))
-        post = db_one("SELECT * FROM posts WHERE id=?", (post_id,))
+        liked = db_one("SELECT 1 FROM likes WHERE user_id=%s AND post_id=%s", (me["id"], post_id))
+        post = db_one("SELECT * FROM posts WHERE id=%s", (post_id,))
         if not post:
             return ("Not found", 404)
 
         if liked:
-            db_execute("DELETE FROM likes WHERE user_id=? AND post_id=?", (me["id"], post_id))
+            db_execute("DELETE FROM likes WHERE user_id=%s AND post_id=%s", (me["id"], post_id))
         else:
-            db_execute("INSERT OR IGNORE INTO likes(user_id, post_id, created_at) VALUES (?, ?, ?)",
+            db_execute("INSERT OR IGNORE INTO likes(user_id, post_id, created_at) VALUES (%s, %s, %s)",
                        (me["id"], post_id, utcnow_iso()))
             if post["user_id"] != me["id"]:
                 create_notification(user_id=post["user_id"], actor_id=me["id"], ntype="like", post_id=post_id)
@@ -398,12 +383,12 @@ def create_app() -> Flask:
             flash("Commentaire trop long (max 300).", "error")
             return redirect(request.referrer or url_for("feed"))
 
-        post = db_one("SELECT * FROM posts WHERE id=?", (post_id,))
+        post = db_one("SELECT * FROM posts WHERE id=%s", (post_id,))
         if not post:
             return ("Not found", 404)
 
         db_execute(
-            "INSERT INTO comments(post_id, user_id, content, created_at) VALUES (?, ?, ?, ?)",
+            "INSERT INTO comments(post_id, user_id, content, created_at) VALUES (%s, %s, %s, %s)",
             (post_id, me["id"], content, utcnow_iso()),
         )
         if post["user_id"] != me["id"]:
@@ -417,7 +402,7 @@ def create_app() -> Flask:
     @login_required
     def rechercher():
         q = request.args.get('q', '').strip()
-        resultats = db_all("SELECT id, username, display_name, profile_pic FROM users WHERE username LIKE ? OR display_name LIKE ?", ('%'+q+'%', '%'+q+'%'))
+        resultats = db_all("SELECT id, username, display_name, profile_pic FROM users WHERE username LIKE %s OR display_name LIKE %s", ('%'+q+'%', '%'+q+'%'))
         return render_template('recherche.html', resultats=resultats, mot_cle=q)
     
     # --- 2. CENTRE DE SAVOIR ---
@@ -431,7 +416,7 @@ def create_app() -> Flask:
     @app.get("/lecon/<int:k_id>")
     @login_required
     def lecon(k_id):
-        article = db_one("SELECT k.*, u.display_name FROM knowledge k JOIN users u ON u.id = k.author_id WHERE k.id=?", (k_id,))
+        article = db_one("SELECT k.*, u.display_name FROM knowledge k JOIN users u ON u.id = k.author_id WHERE k.id=%s", (k_id,))
         return render_template("lecon.html", article=article)
 
     # --- 3. LA MINE D'OR (RÉMUNÉRATION) ---
@@ -439,10 +424,10 @@ def create_app() -> Flask:
     @login_required
     def wallet():
         me = current_user()
-        w = db_one("SELECT * FROM wallets WHERE user_id=?", (me['id'],))
+        w = db_one("SELECT * FROM wallets WHERE user_id=%s", (me['id'],))
         if not w:
-            db_execute("INSERT INTO wallets (user_id) VALUES (?)", (me['id'],))
-            w = db_one("SELECT * FROM wallets WHERE user_id=?", (me['id'],))
+            db_execute("INSERT INTO wallets (user_id) VALUES (%s)", (me['id'],))
+            w = db_one("SELECT * FROM wallets WHERE user_id=%s", (me['id'],))
         return render_template("wallet.html", wallet=w)
      
 # --- LE MOTEUR UNIQUE DE LA MINE (Version Maître) ---
@@ -456,20 +441,14 @@ def create_app() -> Flask:
         gain = 0.0010
         
         # Mise à jour du portefeuille de l'élève (Bourse d'étude)
-        db_execute("UPDATE wallets SET total_earnings = total_earnings + ? WHERE user_id = ?", 
+        db_execute("UPDATE wallets SET total_earnings = total_earnings + %s WHERE user_id = %s", 
                    (gain, me['id']))
         
         # Mise à jour du temps d'étude total
-        db_execute("UPDATE wallets SET watch_time = watch_time + 30 WHERE user_id = ?", 
+        db_execute("UPDATE wallets SET watch_time = watch_time + 30 WHERE user_id = %s", 
                    (me['id'],))
 
         return jsonify({"status": "mining", "earned": gain})
-   # @app.post("/api/mine/heartbeat/<int:k_id>")
-    #@login_required
-    #def mine_heartbeat(k_id):
-        # Logique de gain : 0.5$ / heure de base. Coef 2.0 pour Programmation.
-        # Paye Prof (si >300 abonnés) + Bourse élève (20%)
-     #   return jsonify({"status": "mining", "earned": 0.0001})
     
     # --- CETTE PORTE MANQUAIT ---
     @app.get("/tuteur")
@@ -513,7 +492,7 @@ def create_app() -> Flask:
         
         # 1. Sauvegarde immédiate dans la mine (Base de données)
         db_execute(
-            "INSERT INTO messages (sender_id, recipient_id, content, created_at, is_read) VALUES (?, ?, ?, ?, 0)",
+            "INSERT INTO messages (sender_id, recipient_id, content, created_at, is_read) VALUES (%s, %s, %s, %s, 0)",
             (me['id'], recipient_id, content, utcnow_iso())
         )
         
@@ -566,9 +545,9 @@ def create_app() -> Flask:
                     f_c.save(os.path.join(app.config['UPLOAD_FOLDER'], filename_c))
 
             db_execute("""UPDATE users SET 
-                          display_name=?, bio=?, profile_pic=?, cover_pic=?, 
-                          language=?, privacy_level=?, video_pref=? 
-                          WHERE id=?""", 
+                          display_name=%s, bio=%s, profile_pic=%s, cover_pic=%s, 
+                          language=%s, privacy_level=%s, video_pref=%s 
+                          WHERE id=%s""", 
                        (display_name, bio, filename_p, filename_c, 
                         language, privacy, video_pref, me['id']))
             
@@ -581,27 +560,27 @@ def create_app() -> Flask:
     @app.get("/u/<username>")
     @login_required
     def profile(username: str):
-        user = db_one("SELECT * FROM users WHERE username=?", (username.lower(),))
+        user = db_one("SELECT * FROM users WHERE username=%s", (username.lower(),))
         if not user:
             return ("Not found", 404)
 
         me = current_user()
         is_me = (me["id"] == user["id"])
-        is_following = bool(db_one("SELECT 1 FROM follows WHERE follower_id=? AND followed_id=?",
+        is_following = bool(db_one("SELECT 1 FROM follows WHERE follower_id=%s AND followed_id=%s",
                                    (me["id"], user["id"]))) if not is_me else False
 
         stats = {
-            "posts": db_one("SELECT COUNT(*) AS c FROM posts WHERE user_id=?", (user["id"],))["c"],
-            "followers": db_one("SELECT COUNT(*) AS c FROM follows WHERE followed_id=?", (user["id"],))["c"],
-            "following": db_one("SELECT COUNT(*) AS c FROM follows WHERE follower_id=?", (user["id"],))["c"],
+            "posts": db_one("SELECT COUNT(*) AS c FROM posts WHERE user_id=%s", (user["id"],))["c"],
+            "followers": db_one("SELECT COUNT(*) AS c FROM follows WHERE followed_id=%s", (user["id"],))["c"],
+            "following": db_one("SELECT COUNT(*) AS c FROM follows WHERE follower_id=%s", (user["id"],))["c"],
         }
         posts = db_all(
             "SELECT p.*, u.username, u.display_name, "
             "(SELECT COUNT(*) FROM likes WHERE post_id=p.id) AS like_count, "
             "(SELECT COUNT(*) FROM comments WHERE post_id=p.id) AS comment_count, "
-            "(SELECT 1 FROM likes WHERE user_id=? AND post_id=p.id) AS liked_by_me "
+            "(SELECT 1 FROM likes WHERE user_id=%s AND post_id=p.id) AS liked_by_me "
             "FROM posts p JOIN users u ON u.id=p.user_id "
-            "WHERE p.user_id=? ORDER BY p.created_at DESC LIMIT 50",
+            "WHERE p.user_id=%s ORDER BY p.created_at DESC LIMIT 50",
             (me["id"], user["id"]),
         )
 
@@ -611,16 +590,16 @@ def create_app() -> Flask:
     @login_required
     def toggle_follow(username: str):
         me = current_user()
-        other = db_one("SELECT * FROM users WHERE username=?", (username.lower(),))
+        other = db_one("SELECT * FROM users WHERE username=%s", (username.lower(),))
         if not other or other["id"] == me["id"]:
             return redirect(request.referrer or url_for("feed"))
 
-        exists = db_one("SELECT 1 FROM follows WHERE follower_id=? AND followed_id=?",
+        exists = db_one("SELECT 1 FROM follows WHERE follower_id=%s AND followed_id=%s",
                         (me["id"], other["id"]))
         if exists:
-            db_execute("DELETE FROM follows WHERE follower_id=? AND followed_id=?", (me["id"], other["id"]))
+            db_execute("DELETE FROM follows WHERE follower_id=%s AND followed_id=%s", (me["id"], other["id"]))
         else:
-            db_execute("INSERT OR IGNORE INTO follows(follower_id, followed_id, created_at) VALUES (?, ?, ?)",
+            db_execute("INSERT OR IGNORE INTO follows(follower_id, followed_id, created_at) VALUES (%s, %s, %s)",
                        (me["id"], other["id"], utcnow_iso()))
             create_notification(user_id=other["id"], actor_id=me["id"], ntype="follow", post_id=None)
 
@@ -639,7 +618,7 @@ def create_app() -> Flask:
     @login_required
     def thread(username: str):
         me = current_user()
-        other = db_one("SELECT * FROM users WHERE username=?", (username.lower(),))
+        other = db_one("SELECT * FROM users WHERE username=%s", (username.lower(),))
         if not other or other["id"] == me["id"]:
             return redirect(url_for("messages"))
 
@@ -648,14 +627,14 @@ def create_app() -> Flask:
             if content:
                 db_execute(
                     "INSERT INTO messages(sender_id, recipient_id, content, created_at, is_read) "
-                    "VALUES (?, ?, ?, ?, 0)",
+                    "VALUES (%s, %s, %s, %s, 0)",
                     (me["id"], other["id"], content[:1000], utcnow_iso()),
                 )
                 flash("Message envoyé.", "ok")
             return redirect(url_for("thread", username=other["username"]))
 
         # mark as read
-        db_execute("UPDATE messages SET is_read=1 WHERE sender_id=? AND recipient_id=?",
+        db_execute("UPDATE messages SET is_read=1 WHERE sender_id=%s AND recipient_id=%s",
                    (other["id"], me["id"]))
 
         msgs = db_all(
@@ -664,7 +643,7 @@ def create_app() -> Flask:
             "FROM messages m "
             "JOIN users su ON su.id=m.sender_id "
             "JOIN users ru ON ru.id=m.recipient_id "
-            "WHERE (m.sender_id=? AND m.recipient_id=?) OR (m.sender_id=? AND m.recipient_id=?) "
+            "WHERE (m.sender_id=%s AND m.recipient_id=%s) OR (m.sender_id=%s AND m.recipient_id=%s) "
             "ORDER BY m.created_at ASC LIMIT 200",
             (me["id"], other["id"], other["id"], me["id"]),
         )
@@ -682,7 +661,7 @@ def create_app() -> Flask:
             "FROM notifications n "
             "JOIN users a ON a.id=n.actor_id "
             "LEFT JOIN posts p ON p.id=n.post_id "
-            "WHERE n.user_id=? ORDER BY n.created_at DESC LIMIT 100",
+            "WHERE n.user_id=%s ORDER BY n.created_at DESC LIMIT 100",
             (me["id"],),
         )
         return render_template("notifications.html", notifications=rows)
@@ -691,7 +670,7 @@ def create_app() -> Flask:
     @login_required
     def notifications_read_all():
         me = current_user()
-        db_execute("UPDATE notifications SET is_read=1 WHERE user_id=?", (me["id"],))
+        db_execute("UPDATE notifications SET is_read=1 WHERE user_id=%s", (me["id"],))
         return redirect(url_for("notifications"))
 
     # ---------- API (JSON) ----------
@@ -711,7 +690,7 @@ def create_app() -> Flask:
             "(SELECT COUNT(*) FROM likes WHERE post_id=p.id) AS like_count, "
             "(SELECT COUNT(*) FROM comments WHERE post_id=p.id) AS comment_count "
             "FROM posts p JOIN users u ON u.id=p.user_id "
-            "ORDER BY p.created_at DESC LIMIT ?",
+            "ORDER BY p.created_at DESC LIMIT %s",
             (limit,),
         )
         return jsonify({"ok": True, "posts": [dict(r) for r in rows]})
@@ -769,16 +748,16 @@ def create_app() -> Flask:
         val_depannage = montant_total * parts['depannage']
 
     # 1. Créditer le Créateur (Professeur/Ingénieur)
-        db_execute("UPDATE wallets SET total_earnings = total_earnings + ? WHERE user_id = ?", (val_createur, createur_id))
+        db_execute("UPDATE wallets SET total_earnings = total_earnings + %s WHERE user_id = %s", (val_createur, createur_id))
     
     # 2. Créditer l'Apprenant
-        db_execute("UPDATE wallets SET total_earnings = total_earnings + ? WHERE user_id = ?", (val_apprenant, apprenant_id))
+        db_execute("UPDATE wallets SET total_earnings = total_earnings + %s WHERE user_id = %s", (val_apprenant, apprenant_id))
     
     # 3. Créditer la Plateforme (Père Hilaire - ID 1 par exemple)
-        db_execute("UPDATE wallets SET total_earnings = total_earnings + ? WHERE user_id = 1", (val_plateforme,))
+        db_execute("UPDATE wallets SET total_earnings = total_earnings + %s WHERE user_id = 1", (val_plateforme,))
     
     # 4. Enregistrer dans le Registre PFA pour la transparence
-        db_execute("""INSERT INTO pfa_registry (transaction_type, amount, category, created_at) VALUES ('EXTRACTION', ?, 'PARTAGE_GLOBAL', ?)""", (montant_total, utcnow_iso()))
+        db_execute("""INSERT INTO pfa_registry (transaction_type, amount, category, created_at) VALUES ('EXTRACTION', %s, 'PARTAGE_GLOBAL', %s)""", (montant_total, utcnow_iso()))
     
         return True
     
@@ -794,7 +773,7 @@ def create_app() -> Flask:
 
         if success:
         # 2. Marquer la progression
-            db_execute("INSERT INTO student_progress (student_id, lesson_id, statut) VALUES (?, ?, 'VALIDE')", (me['id'], l_id))
+            db_execute("INSERT INTO student_progress (student_id, lesson_id, statut) VALUES (%s, %s, 'VALIDE')", (me['id'], l_id))
         
         # 3. ACTIVER LA MINE (Récompense de réussite)
         # On utilise ton algorithme : 1$ de valeur créée par la réussite
@@ -826,61 +805,74 @@ def create_app() -> Flask:
         
         return jsonify({"output": result})
     # ---------- HELPERS ----------
-
+    
     def db_conn():
         db = getattr(g, "db", None)
         if db is None:
-        # Remplace les infos par celles créées à l'étape 2
-            db = psycopg2.connect(
-            dbname="ph_fire_db",
-            user="ph_admin",
-            password="ton_mot_de_passe",
-            host="localhost",
-            cursor_factory=RealDictCursor # Pour garder l'accès par nom de colonne
-        )
-            g.db = db
+            try:
+                db = psycopg2.connect(
+                    dbname="ph_fire_db",
+                    user="ph_admin",
+                    password="hilaire2026", # REMPLACE PAR TON VRAI MOT DE PASSE ICI
+                    host="localhost",
+                    cursor_factory=RealDictCursor
+                )
+                g.db = db
+            except Exception as e:
+                print(f"❌ ERREUR CONNEXION POSTGRES : {e}")
+                raise e
         return db
 
-    def db_one(sql: str, params=()):
-        cur = db_conn().execute(sql, params)
-        row = cur.fetchone()
-        cur.close()
-        return row
-
-    def db_all(sql: str, params=()):
-        cur = db_conn().execute(sql, params)
-        rows = cur.fetchall()
-        cur.close()
-        return rows
-
-    def db_execute(sql: str, params=()):
+    def db_one(sql, params=()):
         conn = db_conn()
-        conn.execute("PRAGMA foreign_keys=ON;")
-        conn.execute(sql, params)
-        conn.commit()
+        cur = conn.cursor() # On crée le curseur
+        try:
+            cur.execute(sql, params)
+            res = cur.fetchone()
+            conn.commit()
+            return res
+        except Exception as e:
+            conn.rollback() # On réinitialise si ça crash
+            print(f"❌ ERREUR DB_ONE: {e}")
+            return None
+        finally:
+            cur.close() # On ferme TOUJOURS le curseur ici
 
-    def init_db(force: bool = False):
-        if DB_PATH.exists() and not force:
-            return
-        init_db_if_needed(force=True)
 
-    def init_db_if_needed(force: bool = False):
-        if DB_PATH.exists() and not force:
-            return
-        DB_PATH.parent.mkdir(exist_ok=True)
-        conn = sqlite3.connect(DB_PATH)
-        conn.execute("PRAGMA foreign_keys=ON;")
-        schema_path = BASE_DIR / "schema.sql"
-        with open(schema_path, "r", encoding="utf-8") as f:
-            conn.executescript(f.read())
-        conn.commit()
-        conn.close()
+    def db_all(sql, params=()):
+        conn = db_conn()
+        cur = conn.cursor()
+        try:
+            cur.execute(sql, params)
+            res = cur.fetchall()
+            conn.commit()
+            return res
+        except Exception as e:
+            conn.rollback()
+            print(f"❌ ERREUR DB_ALL: {e}")
+            return []
+        finally:
+            cur.close()
+
+    def db_execute(sql, params=()):
+        conn = db_conn()
+        cur = conn.cursor()
+        try:
+            cur.execute(sql, params)
+            conn.commit()
+        except Exception as e:
+            conn.rollback()
+            print(f"❌ ERREUR DB_EXECUTE: {e}")
+            raise e
+        finally:
+            cur.close()
+
 
     def current_user():
         uid = session.get("user_id")
         if not uid: return None
         # Le '*' est obligatoire pour récupérer TOUTES les nouvelles colonnes
-        return db_one("SELECT * FROM users WHERE id=?", (uid,))
+        return db_one("SELECT * FROM users WHERE id=%s", (uid,))
     
     def create_notification(user_id: int, actor_id: int, ntype: str, post_id):
         # ignore self
@@ -888,7 +880,7 @@ def create_app() -> Flask:
             return
         db_execute(
             "INSERT INTO notifications(user_id, actor_id, ntype, post_id, created_at, is_read) "
-            "VALUES (?, ?, ?, ?, ?, 0)",
+            "VALUES (%s, %s, %s, %s, %s, 0)",
             (user_id, actor_id, ntype, post_id, utcnow_iso()),
         )
 
@@ -896,7 +888,7 @@ def create_app() -> Flask:
         me = current_user()
         if not me:
             return 0
-        row = db_one("SELECT COUNT(*) AS c FROM notifications WHERE user_id=? AND is_read=0", (me["id"],))
+        row = db_one("SELECT COUNT(*) AS c FROM notifications WHERE user_id=%s AND is_read=0", (me["id"],))
         return int(row["c"] or 0)
 
     def get_feed_posts(user_id):
@@ -910,7 +902,7 @@ def create_app() -> Flask:
             u.profile_pic, -- C'EST CETTE LIGNE QUI RÉPARE LA PHOTO D'ONCLE
             (SELECT COUNT(*) FROM likes WHERE post_id = p.id) AS like_count,
             (SELECT COUNT(*) FROM comments WHERE post_id = p.id) AS comment_count,
-            (SELECT 1 FROM likes WHERE user_id = ? AND post_id = p.id) AS liked_by_me
+            (SELECT 1 FROM likes WHERE user_id = %s AND post_id = p.id) AS liked_by_me
         FROM posts p
         JOIN users u ON u.id = p.user_id
         ORDER BY p.created_at DESC 
@@ -924,7 +916,7 @@ def create_app() -> Flask:
             "SELECT p.*, u.username, u.display_name, "
             "(SELECT COUNT(*) FROM likes WHERE post_id=p.id) AS like_count, "
             "(SELECT COUNT(*) FROM comments WHERE post_id=p.id) AS comment_count, "
-            "(SELECT 1 FROM likes WHERE user_id=? AND post_id=p.id) AS liked_by_me "
+            "(SELECT 1 FROM likes WHERE user_id=%s AND post_id=p.id) AS liked_by_me "
             "FROM posts p JOIN users u ON u.id=p.user_id "
             "ORDER BY p.created_at DESC LIMIT 80",
             (my_id,),
@@ -933,7 +925,7 @@ def create_app() -> Flask:
     def get_suggestions(user_id: int):
         return db_all(
             "SELECT id, username, display_name FROM users "
-            "WHERE id != ? AND id NOT IN (SELECT followed_id FROM follows WHERE follower_id=?) "
+            "WHERE id != %s AND id NOT IN (SELECT followed_id FROM follows WHERE follower_id=%s) "
             "ORDER BY created_at DESC LIMIT 5",
             (user_id, user_id),
         )
@@ -944,53 +936,48 @@ def create_app() -> Flask:
         SELECT 
             u.id, u.username, u.display_name, u.profile_pic,
             m.content as last_msg, m.created_at,
-            (SELECT COUNT(*) FROM messages WHERE sender_id = u.id AND recipient_id = ? AND is_read = 0) as unread_count
+            (SELECT COUNT(*) FROM messages WHERE sender_id = u.id AND recipient_id = %s AND is_read = 0) as unread_count
         FROM users u
-        JOIN messages m ON (m.sender_id = u.id AND m.recipient_id = ?) 
-                        OR (m.sender_id = ? AND m.recipient_id = u.id)
-        WHERE u.id != ?
+        JOIN messages m ON (m.sender_id = u.id AND m.recipient_id = %s) 
+                        OR (m.sender_id = %s AND m.recipient_id = u.id)
+        WHERE u.id != %s
         GROUP BY u.id
         ORDER BY m.created_at DESC
     """
         return db_all(query, (user_id, user_id, user_id, user_id))
 
     def seed_demo():
-        # create two demo users if none
-        existing = db_one("SELECT COUNT(*) AS c FROM users", ())["c"]
-        if existing and int(existing) > 0:
+        # 1. On vérifie d'abord s'il y a déjà des bâtisseurs dans le grenier
+        # Note : On utilise %s même si ici il n'y a pas de paramètres pour rester propre
+        existing = db_one("SELECT COUNT(*) AS c FROM users")
+        if existing and int(existing['c']) > 0:
             return
 
         demo_users = [
             ("demo1", "demo1@phfire.africa", "Demo 1"),
             ("demo2", "demo2@phfire.africa", "Demo 2"),
         ]
+
         for username, identifier, display_name in demo_users:
             try:
+                # Utilisation de %s pour PostgreSQL
                 db_execute(
                     "INSERT INTO users(username, identifier, display_name, bio, password_hash, created_at) "
-                    "VALUES (?, ?, ?, ?, ?, ?)",
+                    "VALUES (%s, %s, %s, %s, %s, %s)",
                     (username, identifier, display_name, "Compte démo.", generate_password_hash("demo123"), utcnow_iso()),
                 )
-            except sqlite3.IntegrityError:
+            except Exception as e:
+                # Si le bâtisseur existe déjà, on ignore l'erreur et on continue
+                # db_execute s'occupe déjà du conn.rollback() en cas d'erreur
+                print(f"ℹ️ Info : Le compte {username} existe déjà ou erreur mineure.")
                 pass
 
-        u1 = db_one("SELECT * FROM users WHERE username='demo1'", ())
-        u2 = db_one("SELECT * FROM users WHERE username='demo2'", ())
+        # On récupère les IDs pour la suite (Follow, etc.)
+        u1 = db_one("SELECT * FROM users WHERE username = %s", ('demo1',))
+        u2 = db_one("SELECT * FROM users WHERE username = %s", ('demo2',))
+        
         if not u1 or not u2:
             return
-
-        db_execute("INSERT OR IGNORE INTO follows(follower_id, followed_id, created_at) VALUES (?, ?, ?)",
-                   (u1["id"], u2["id"], utcnow_iso()))
-        db_execute("INSERT OR IGNORE INTO follows(follower_id, followed_id, created_at) VALUES (?, ?, ?)",
-                   (u2["id"], u1["id"], utcnow_iso()))
-
-        posts = [
-            (u1["id"], "Bienvenue sur PH FIRE AFRICA 🇨🇩🔥 — version web MVP.", None),
-            (u2["id"], "Objectif: réseau social + messagerie + notifications + profil.", None),
-            (u1["id"], "Prochaine étape: paiements Mobile Money, marketplace, IA…", None),
-        ]
-        for uid, content, img in posts:
-            db_execute("INSERT INTO posts(user_id, content, image_filename, created_at) VALUES (?, ?, ?, ?)",(uid, content, img, utcnow_iso()))
 
     # run demo seed once (only when empty)
     @app.before_request
