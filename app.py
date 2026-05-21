@@ -27,7 +27,7 @@ UPLOAD_DIR = BASE_DIR / "static" / "uploads"
 
 USERNAME_RE = re.compile(r"^[a-zA-Z0-9_]{3,20}$")
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
-PHONE_RE = re.compile(r"^\+%s\d{6,15}$")
+PHONE_RE = re.compile(r"^\+ %s \d{6,15}$")
 socketio = SocketIO()
 
 
@@ -176,19 +176,14 @@ def create_app() -> Flask:
     @app.get("/feed")
     @login_required
     def feed():
-    # 1. Récupération de l'identité du bâtisseur connecté
         me = current_user()
-    
-    # 2. Extraction du minerai (les posts) avec les infos des auteurs
-    # On passe l'ID de 'me' pour savoir si on a "liké" les posts
+        # On récupère les posts en passant l'ID pour savoir si 'me' a liké
         posts = get_feed_posts(me["id"])
-    
-    # 3. Suggestions de nouveaux frères à suivre
         suggestions = get_suggestions(me["id"])
     
-    # 4. Rendu de l'édifice
         return render_template("feed.html", posts=posts, suggestions=suggestions, me=me)
 # exploration : posts populaires tous utilisateurs
+
     @app.get("/explore")
     @login_required
     def explore():
@@ -356,20 +351,19 @@ def create_app() -> Flask:
     @login_required
     def toggle_like(post_id: int):
         me = current_user()
-        liked = db_one("SELECT 1 FROM likes WHERE user_id=%s AND post_id=%s", (me["id"], post_id))
-        post = db_one("SELECT * FROM posts WHERE id=%s", (post_id,))
+        # On remplace ? par %s
+        liked = db_one("SELECT 1 FROM likes WHERE user_id = %s AND post_id = %s", (me["id"], post_id))
+        post = db_one("SELECT * FROM posts WHERE id = %s", (post_id,))
+    
         if not post:
-            return ("Not found", 404)
+            return ("Non trouvé", 404)
 
         if liked:
-            db_execute("DELETE FROM likes WHERE user_id=%s AND post_id=%s", (me["id"], post_id))
+            db_execute("DELETE FROM likes WHERE user_id = %s AND post_id = %s", (me["id"], post_id))
         else:
-            db_execute("INSERT OR IGNORE INTO likes(user_id, post_id, created_at) VALUES (%s, %s, %s)",
-                       (me["id"], post_id, utcnow_iso()))
-            if post["user_id"] != me["id"]:
-                create_notification(user_id=post["user_id"], actor_id=me["id"], ntype="like", post_id=post_id)
-
-        return redirect(request.referrer or url_for("feed"))
+            db_execute("INSERT INTO likes(user_id, post_id, created_at) VALUES (%s, %s, %s)",
+            (me["id"], post_id, utcnow_iso()))
+            return redirect(request.referrer or url_for("feed"))
 
     @app.post("/comment/<int:post_id>")
     @login_required
@@ -699,7 +693,7 @@ def create_app() -> Flask:
 
     @app.cli.command("init-db")
     def init_db_command():
-        init_db(force=True)
+        init_db(force=False)
         print("✅ Base de données initialisée.")
 
     @app.cli.command("seed-demo")
@@ -892,23 +886,19 @@ def create_app() -> Flask:
         return int(row["c"] or 0)
 
     def get_feed_posts(user_id):
-    # Cette requête SQL est une brique de précision :
-    # Elle va chercher le post + le nom de l'auteur + la PHOTO de l'auteur
         query = """
         SELECT 
-            p.*, 
-            u.username, 
-            u.display_name, 
-            u.profile_pic, -- C'EST CETTE LIGNE QUI RÉPARE LA PHOTO D'ONCLE
-            (SELECT COUNT(*) FROM likes WHERE post_id = p.id) AS like_count,
-            (SELECT COUNT(*) FROM comments WHERE post_id = p.id) AS comment_count,
-            (SELECT 1 FROM likes WHERE user_id = %s AND post_id = p.id) AS liked_by_me
-        FROM posts p
-        JOIN users u ON u.id = p.user_id
-        ORDER BY p.created_at DESC 
-        LIMIT 50"""
+        p.*, u.username, u.display_name, u.profile_pic,
+        (SELECT COUNT(*) FROM likes WHERE post_id = p.id) AS like_count,
+        (SELECT COUNT(*) FROM comments WHERE post_id = p.id) AS comment_count,
+        -- PostgreSQL : on s'assure que le résultat est un entier 1 ou 0
+        COALESCE((SELECT 1 FROM likes WHERE user_id = %s AND post_id = p.id LIMIT 1), 0) AS liked_by_me
+    FROM posts p
+    JOIN users u ON u.id = p.user_id
+    ORDER BY p.created_at DESC 
+    LIMIT 50"""
         return db_all(query, (user_id,))
-
+        
     def get_explore_posts():
         me = current_user()
         my_id = me["id"]
@@ -922,13 +912,13 @@ def create_app() -> Flask:
             (my_id,),
         )
 
-    def get_suggestions(user_id: int):
-        return db_all(
-            "SELECT id, username, display_name FROM users "
-            "WHERE id != %s AND id NOT IN (SELECT followed_id FROM follows WHERE follower_id=%s) "
-            "ORDER BY created_at DESC LIMIT 5",
-            (user_id, user_id),
-        )
+    def get_suggestions(user_id):
+        query = """
+        SELECT id, username, display_name, profile_pic FROM users 
+        WHERE id != %s 
+        AND id NOT IN (SELECT followed_id FROM follows WHERE follower_id = %s) 
+        ORDER BY created_at DESC LIMIT 5"""
+        return db_all(query, (user_id, user_id))
 
     def get_message_threads(user_id):
     # Cette requête récupère : l'autre utilisateur, sa photo, le dernier message et le compte des non-lus
