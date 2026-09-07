@@ -195,6 +195,26 @@ def create_app() -> Flask:
     def logout():
         session.clear()
         return redirect(url_for("index"))
+# --- RECHERCHE DES BÂTISSEURS (Souveraineté Numérique) ---
+    @app.get("/rechercher")
+    @login_required
+    def rechercher():
+        # 1. On récupère le mot-clé tapé par l'utilisateur
+        q = request.args.get('q', '').strip()
+        
+        # 2. Requête PostgreSQL : ILIKE permet de trouver "Omar" même si on écrit "omar"
+        query = """
+            SELECT id, username, display_name, profile_pic 
+            FROM users 
+            WHERE username ILIKE %s OR display_name ILIKE %s
+            LIMIT 20
+        """
+        
+        # 3. Extraction des résultats
+        resultats = db_all(query, ('%' + q + '%', '%' + q + '%'))
+        
+        # 4. Affichage de la page de recherche
+        return render_template('recherche.html', resultats=resultats, mot_cle=q)
 
     # --- FEED & POSTS ---
     @app.get("/feed")
